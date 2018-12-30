@@ -288,6 +288,7 @@ def run_bert():
     full = BertSession(0.7, 0.3, 100, loader, estimator)
     for session in (very_small,small,notso_small,full):
         print(session)
+        estimator.setup_estimator(len(session.data_provider.x_train),session.data_provider.get_labels())
         session.train()
         session.evaluate()
         session.predict()
