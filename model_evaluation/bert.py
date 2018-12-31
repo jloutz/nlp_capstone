@@ -297,6 +297,8 @@ def run_bert_local():
 
 def run_bert_tpu():
     loader_conf = data_preparation.AmazonQADataLoaderConfig()
+    loader_conf.json_dir = "data/amazon_qa/json"
+    loader_conf.persist_dir = "data/amazon_qa"
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
     config = BertEstimatorConfig(
