@@ -70,14 +70,14 @@ class AmazonQADataLoader(DataLoader):
     def _extract_text_and_labels(self,lazy=True):
         ## parse data in json files preserving only labels (category name) and texts
         ## both questions and answers found in json are treated as example texts for each category
-        if not lazy or not self.json_dir.exists() or len(os.listdir(self.json_dir))==0:
+        if not lazy or not self.json_dir.exists() or len(os.listdir(str(self.json_dir)))==0:
             self._unpack()
         import ast
         import re
         labels = []
         texts = []
         print("Extracting...")
-        for category_file_name in os.listdir(self.json_dir):
+        for category_file_name in os.listdir(str(self.json_dir)):
             print("Loading text from: ", category_file_name)
             label = re.split("qa_(.*)\\.json", category_file_name)[1].lower()
             labels.append(label)
@@ -96,7 +96,7 @@ class AmazonQADataLoader(DataLoader):
         ## extract raw data from .gz files and persist as json
         if not self.raw_dir.exists() or len(os.listdir(self.raw_dir)) == 0:
             raise Exception("No raw data to extract...")
-        if not os.path.exists(self.json_dir):
+        if not self.json_dir.exists():
             pathlib.Path.mkdir(self.json_dir,parents=True)
         print("Unpacking..")
         for gz_file in os.listdir(self.raw_dir):
