@@ -1,5 +1,5 @@
 import time
-import data_preparation
+import model_evaluation.data_preparation as data_preparation
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.model_selection import GridSearchCV
