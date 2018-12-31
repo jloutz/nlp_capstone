@@ -1,6 +1,6 @@
 import os
 
-import data_preparation
+import model_evaluation.data_preparation as data_preparation
 from base import Estimator, Session
 import pathlib
 
@@ -68,7 +68,9 @@ class BertEstimatorConfig:
 
 
 class BertEstimator(Estimator):
-
+    """
+    rework of bert-base run_classifier
+    """
     def __init__(self,config:BertEstimatorConfig):
         """
         iniialize and setup/validate the estimator
