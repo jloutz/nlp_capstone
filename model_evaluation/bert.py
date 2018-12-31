@@ -313,8 +313,6 @@ def run_bert_local():
 
 def run_bert_tpu():
     loader_conf = data_preparation.AmazonQADataLoaderConfig("/home/jloutz67/nlp_capstone")
-    loader_conf.json_dir = "data/amazon_qa/json"
-    loader_conf.persist_dir = "data/amazon_qa"
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
     config = BertEstimatorConfig(
@@ -336,4 +334,5 @@ def run_bert_tpu():
 
 if __name__=="__main__":
     #setup_estimator_test()
-    run_bert_local()
+    #run_bert_local()
+    run_bert_tpu()
