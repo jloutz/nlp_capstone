@@ -276,7 +276,7 @@ class BertSession(Session):
         self.estimator.predict(X, y)
 
 
-def run_bert():
+def run_bert_local():
     loader_conf = data_preparation.AmazonQADataLoaderConfig()
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
@@ -291,6 +291,27 @@ def run_bert():
     for session in (very_small,small,notso_small,full):
         print(session)
         estimator.setup_estimator(len(session.data_provider.x_train),session.data_provider.get_labels())
+        session.train()
+        session.evaluate()
+        session.predict()
+
+def run_bert_tpu():
+    loader_conf = data_preparation.AmazonQADataLoaderConfig()
+    loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
+    loader.load()
+    config = BertEstimatorConfig(
+        bert_pretrained_dir="gs://cloud-tpu-checkpoints/bert/uncased_L-12_H-768_A-12",
+        output_dir="gs://nlpcapstone_bucket/output/bert/",
+        tpu_name=os.environ["TPU_NAME"]
+    )
+    estimator = BertEstimator(config)
+    very_small = BertSession(200, 200, 20, loader, estimator)
+    small = BertSession(3000, 100, 20, loader, estimator)
+    #notso_small = BertSession(30000, 10000, 20, loader, estimator)
+    #full = BertSession(0.7, 0.3, 100, loader, estimator)
+    for session in (very_small, small):
+        print(session)
+        estimator.setup_estimator(len(session.data_provider.x_train), session.data_provider.get_labels())
         session.train()
         session.evaluate()
         session.predict()
