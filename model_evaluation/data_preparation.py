@@ -166,10 +166,10 @@ class DataProvider:
         for (i,sample) in enumerate(samples):
             guid = "%s-%s" % (set_type, i)
             text = tokenization.convert_to_unicode(sample[0])
-            if set_type == "test":
-                label = "0"
-            else:
-                label = tokenization.convert_to_unicode(sample[1])
+            #if set_type == "test":
+             #   label = "0"
+            #else:
+            label = tokenization.convert_to_unicode(sample[1])
             examples.append(
                 InputExample(guid=guid, text_a=text, label=label))
         return examples
