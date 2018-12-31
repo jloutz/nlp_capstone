@@ -1,7 +1,7 @@
 import os
 
 import model_evaluation.data_preparation as data_preparation
-from base import Estimator, Session
+from model_evaluation.base import Estimator, Session
 import pathlib
 
 import modeling
