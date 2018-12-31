@@ -1,7 +1,6 @@
 import os
 import gzip
 import random
-import pathlib
 ## sklearn
 from sklearn.externals import joblib
 from sklearn.model_selection import train_test_split
@@ -27,14 +26,13 @@ GCP_PROJECT_DIR = "/home/jloutz67/nlp_capstone"
 class AmazonQADataLoaderConfig:
     """ config for loader """
     def __init__(self,project_dir):
-        project_path = pathlib.Path(project_dir)
-        if not project_path.exists():
+        if not os.path.exists(project_dir):
             raise Exception("project path incorrect or doesnt exist...")
-        self.json_dir = project_path / "data/amazon_qa/json"
-        self.raw_dir = project_path / "data/amazon_qa_/raw"
-        self.persist_dir = project_path / "data/amazon_qa"
+        self.json_dir = os.path.join(project_dir, "data/amazon_qa/json")
+        self.raw_dir = os.path.join(project_dir, "data/amazon_qa/raw")
+        self.persist_dir = os.path.join(project_dir, "data/amazon_qa")
         persist_name = "labeled_text.pkl"
-        self.persist_path = project_path / persist_name
+        self.persist_path = os.path.join(project_dir, persist_name)
 
 
 class AmazonQADataLoader(DataLoader):
@@ -55,7 +53,7 @@ class AmazonQADataLoader(DataLoader):
         return self.data
 
     def load(self,lazy=True, persist=True):
-        if lazy and self.persist_path.exists():
+        if lazy and os.path.exists(self.persist_path):
             print("loading from ",self.persist_path)
             self.data = joblib.load(self.persist_path)
             print("done!")
@@ -70,19 +68,19 @@ class AmazonQADataLoader(DataLoader):
     def _extract_text_and_labels(self,lazy=True):
         ## parse data in json files preserving only labels (category name) and texts
         ## both questions and answers found in json are treated as example texts for each category
-        if not lazy or not self.json_dir.exists() or len(os.listdir(str(self.json_dir)))==0:
+        if not lazy or not os.path.exists(self.json_dir) or len(os.listdir(self.json_dir))==0:
             self._unpack()
         import ast
         import re
         labels = []
         texts = []
         print("Extracting...")
-        for category_file_name in os.listdir(str(self.json_dir)):
+        for category_file_name in os.listdir(self.json_dir):
             print("Loading text from: ", category_file_name)
             label = re.split("qa_(.*)\\.json", category_file_name)[1].lower()
             labels.append(label)
             category_texts = []
-            with open(self.json_dir / category_file_name, "rt") as f:
+            with open(os.path.join(self.json_dir,category_file_name), "rt") as f:
                 for line in f.readlines():
                     obj = ast.literal_eval(line)
                     category_texts.append(obj['question'])
@@ -94,16 +92,16 @@ class AmazonQADataLoader(DataLoader):
 
     def _unpack(self):
         ## extract raw data from .gz files and persist as json
-        if not self.raw_dir.exists() or len(os.listdir(self.raw_dir)) == 0:
+        if not os.path.exists(self.raw_dir) or len(os.listdir(self.raw_dir)) == 0:
             raise Exception("No raw data to extract...")
-        if not self.json_dir.exists():
-            pathlib.Path.mkdir(self.json_dir,parents=True)
+        if not os.path.exists(self.json_dir):
+            os.makedirs(self.json_dir,exist_ok=True)
         print("Unpacking..")
         for gz_file in os.listdir(self.raw_dir):
-            with gzip.open(self.raw_dir / gz_file, mode="rt") as gz_f:
+            with gzip.open(os.path.join(self.raw_dir,gz_file), mode="rt") as gz_f:
                 f_content = gz_f.read()
                 out_name = gz_file.split(".gz")[0]
-                out_path = self.json_dir / out_name
+                out_path = os.path.join(self.json_dir,out_name)
                 if os.path.exists(out_path):
                     os.remove(str(out_path))
                 with open(out_path, mode="wt") as out:
@@ -210,7 +208,7 @@ def load_amazon_qa_data(local=True):
     ## put it all together
     conf = AmazonQADataLoaderConfig(proj_dir)
     loader = AmazonQADataLoader(conf=conf)
-    loader.load()
+    loader.load(lazy=False)
     provider = DataProvider("testProvider")
     provider.sample_from_data(loader.data)
     print(provider)
