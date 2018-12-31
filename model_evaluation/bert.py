@@ -2,7 +2,6 @@ import os
 
 import data_preparation as data_preparation
 from base import Estimator, Session
-import pathlib
 
 import modeling
 import tokenization
