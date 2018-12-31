@@ -1,7 +1,7 @@
 import os
 
-import model_evaluation.data_preparation as data_preparation
-from model_evaluation.base import Estimator, Session
+import data_preparation as data_preparation
+from base import Estimator, Session
 import pathlib
 
 import modeling
@@ -19,20 +19,19 @@ in bert-master run_classifier. I can't help it, it is how my brain works.
 class BertEstimatorConfig:
 
     def __init__(self,
-                 bert_pretrained_dir = "../data/uncased_L-12_H-768_A-12",
-                 output_dir = "../output/amazonqa_output",
+                 bert_pretrained_dir,
+                 output_dir ,
                  use_tpu = True,
-                 tpu_name = ""
+                 tpu_name = None
                  ):
 
-        pretr_dir = pathlib.Path(bert_pretrained_dir)
-        self.bert_config_file = pretr_dir / 'bert_config.json'
-        self.vocab_file = pretr_dir / 'vocab.txt'
+        self.bert_config_file = os.path.join(bert_pretrained_dir, 'bert_config.json')
+        self.vocab_file = os.path.join(bert_pretrained_dir, 'vocab.txt')
         "The output directory where the model checkpoints will be written."
         self.output_dir = output_dir
         "Initial checkpoint (usually from a pre-trained BERT model)."
-        self.init_checkpoint = pretr_dir / 'bert_model.ckpt'
-        self.do_lower_case = (str(pretr_dir).find("uncased")>-1)
+        self.init_checkpoint = os.path.join(bert_pretrained_dir, 'bert_model.ckpt')
+        self.do_lower_case = (bert_pretrained_dir.find("uncased")>-1)
         "The maximum total input sequence length after WordPiece tokenization. "
         "Sequences longer than this will be truncated, and sequences shorter "
         "than this will be padded."
@@ -275,13 +274,30 @@ class BertSession(Session):
         y = self.data_provider.get_labels()
         self.estimator.predict(X, y)
 
-
-def run_bert_local():
-    loader_conf = data_preparation.AmazonQADataLoaderConfig()
+def setup_estimator_test():
+    loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
     config = BertEstimatorConfig(
-        use_tpu=False
+        bert_pretrained_dir="C:/Projects/udacity-capstone/data/uncased_L-12_H-768_A-12",
+        output_dir="C:/Projects/udacity-capstone/output/bert/",
+        use_tpu=False,
+        tpu_name=None
+    )
+    estimator = BertEstimator(config)
+    session = BertSession(200, 200, 20, loader, estimator)
+    estimator.setup_estimator(len(session.data_provider.x_train), session.data_provider.get_labels())
+
+
+def run_bert_local():
+    loader_conf = data_preparation.AmazonQADataLoaderConfig("C:/Projects/udacity-capstone/")
+    loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
+    loader.load()
+    config = BertEstimatorConfig(
+        bert_pretrained_dir="C:/Projects/udacity-capstone/data/uncased_L-12_H-768_A-12",
+        output_dir="C:/Projects/udacity-capstone/output/bert/",
+        use_tpu=False,
+        tpu_name=None
     )
     estimator = BertEstimator(config)
     very_small = BertSession(200, 200, 20, loader, estimator)
@@ -296,7 +312,7 @@ def run_bert_local():
         session.predict()
 
 def run_bert_tpu():
-    loader_conf = data_preparation.AmazonQADataLoaderConfig()
+    loader_conf = data_preparation.AmazonQADataLoaderConfig("/home/jloutz67/nlp_capstone")
     loader_conf.json_dir = "data/amazon_qa/json"
     loader_conf.persist_dir = "data/amazon_qa"
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
@@ -317,3 +333,7 @@ def run_bert_tpu():
         session.train()
         session.evaluate()
         session.predict()
+
+if __name__=="__main__":
+    #setup_estimator_test()
+    run_bert_local()

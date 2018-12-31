@@ -21,14 +21,20 @@ class DataLoader():
         pass
 
 
+LOCAL_PROJECT_DIR = "C:/Projects/udacity-capstone"
+GCP_PROJECT_DIR = "/home/jloutz67/nlp_capstone"
 
 class AmazonQADataLoaderConfig:
     """ config for loader """
-    def __init__(self):
-        self.json_dir = "../data/amazon_qa/json"
-        self.raw_dir = "../data/amazon_qa_/raw"
-        self.persist_dir = "../data/amazon_qa"
-        self.persist_name = "labeled_text.pkl"
+    def __init__(self,project_dir):
+        project_path = pathlib.Path(project_dir)
+        if not project_path.exists():
+            raise Exception("project path incorrect or doesnt exist...")
+        self.json_dir = project_path / "data/amazon_qa/json"
+        self.raw_dir = project_path / "data/amazon_qa_/raw"
+        self.persist_dir = project_path / "data/amazon_qa"
+        persist_name = "labeled_text.pkl"
+        self.persist_path = project_path / persist_name
 
 
 class AmazonQADataLoader(DataLoader):
@@ -38,11 +44,9 @@ class AmazonQADataLoader(DataLoader):
     load this data lazily or eagerly if lazy = False is passed to load method.
     """
     def __init__(self,conf:AmazonQADataLoaderConfig):
-        self.json_dir = pathlib.Path(conf.json_dir)
-        self.raw_dir = pathlib.Path(conf.raw_dir)
-        self.persist_dir = pathlib.Path(conf.persist_dir)
-        self.persist_name = conf.persist_name
-        self.persist_path = self.persist_dir / self.persist_name
+        self.json_dir = conf.json_dir
+        self.raw_dir = conf.raw_dir
+        self.persist_path = conf.persist_path
         self.data = None
 
     def get_data(self):
@@ -198,9 +202,13 @@ class DataProvider:
     def __str__(self):
         return  "provider to string...TODO"
 
-def load_amazon_qa_data():
+def load_amazon_qa_data(local=True):
+    if local:
+        proj_dir = LOCAL_PROJECT_DIR
+    else:
+        proj_dir = GCP_PROJECT_DIR
     ## put it all together
-    conf = AmazonQADataLoaderConfig()
+    conf = AmazonQADataLoaderConfig(proj_dir)
     loader = AmazonQADataLoader(conf=conf)
     loader.load()
     provider = DataProvider("testProvider")
@@ -210,5 +218,5 @@ def load_amazon_qa_data():
 
 
 
-
-
+if __name__ == "__main__":
+    load_amazon_qa_data()
