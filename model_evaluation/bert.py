@@ -325,13 +325,13 @@ def run_bert_tpu():
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
     config = BertEstimatorConfig(
-        bert_pretrained_dir=BERT_LARGE_MODEL,
+        bert_pretrained_dir=BERT_BASE_MODEL,
         output_dir="gs://nlpcapstone_bucket/output/bert/",
         tpu_name=os.environ["TPU_NAME"]
     )
     very_small = BertSession(500, 100, 20, loader, BertEstimator(config))
-    small = BertSession(1000, 100, 20, loader, BertEstimator(config))
-    notso_small = BertSession(30000, 10000, 20, loader, BertEstimator(config))
+    #small = BertSession(1000, 100, 20, loader, BertEstimator(config))
+    #notso_small = BertSession(30000, 10000, 20, loader, BertEstimator(config))
     #full = BertSession(0.7, 0.3, 100, loader, estimator)
     #for session in (very_small,small):
     session = very_small
