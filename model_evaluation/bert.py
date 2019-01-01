@@ -272,16 +272,25 @@ class BertSession(Session):
     def train(self):
         X = self.data_provider.get_train_examples()
         y = self.data_provider.get_labels()
+        if X is None:
+            print("train called although no training data exists in provider (was train_size 0?)")
+            return
         self.estimator.train(X,y)
 
     def evaluate(self):
         X = self.data_provider.get_dev_examples()
         y = self.data_provider.get_labels()
+        if X is None:
+            print("evaluate called although no eval data exists in provider (was eval_size 0?)")
+            return
         self.estimator.evaluate(X, y)
 
     def predict(self, X=None):
         if X is None:
             X = self.data_provider.get_test_examples()
+            if X is None:
+                print("test called although no test data exists in provider (was test_size 0?)")
+                return
         y = self.data_provider.get_labels()
         self.estimator.predict(X, y)
 
@@ -296,7 +305,7 @@ def setup_estimator_test():
         tpu_name=None
     )
     estimator = BertEstimator(config)
-    session = BertSession(200, 200, 20, loader, estimator)
+    session = BertSession("setup_test",200, 200, 20, loader, estimator)
     estimator.setup_estimator(len(session.data_provider.x_train), session.data_provider.get_labels())
 
 
@@ -337,17 +346,16 @@ def run_bert_tpu():
     )
     estimator=BertEstimator(config)
     very_small = BertSession("very_small_bert",500, 100, 20, loader, estimator)
-    #small = BertSession(1000, 100, 20, loader, BertEstimator(config))
-    #notso_small = BertSession(30000, 10000, 20, loader, BertEstimator(config))
-    #full = BertSession(0.7, 0.3, 100, loader, estimator)
-    #for session in (very_small,small):
-    session = very_small
-    print("*********************************************************************************    NEW SESSION ******")
-    print(session)
+    print(very_small)
     print()
-    session.train()
-    session.evaluate()
-    session.predict()
+    very_small.train()
+    very_small.evaluate()
+    very_small.predict()
+    eval_500 = BertSession("very_small_bert", 0, 500, 0, loader, estimator)
+    print(eval_500)
+    print()
+    eval_500.evaluate()
+
 
 if __name__=="__main__":
     #setup_estimator_test()

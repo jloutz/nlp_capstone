@@ -74,11 +74,17 @@ class Session():
     def train(self):
         X = self.data_provider.x_train
         y = self.data_provider.y_train
+        if X is None:
+            print("train called although no training data exists in provider (was train_size 0?)")
+            return
         self.estimator.train(X,y)
 
     def evaluate(self):
         X = self.data_provider.x_eval
         y = self.data_provider.y_eval
+        if X is None:
+            print("evaluate called although no eval data exists in provider (was eval_size 0?)")
+            return None
         res = self.estimator.evaluate(X,y)
         print("Evaluation result: ",res[2])##TODO
         return res
@@ -86,6 +92,9 @@ class Session():
     def predict(self, X = None):
         if X is None:
             X = self.data_provider.x_test
+            if X is None:
+                print("predict called although no predict data exists in provider (was test_size 0?)")
+                return None
         res = self.estimator.predict(X)
         print("Predictions: ")
         for pred in res:
@@ -93,7 +102,8 @@ class Session():
         return res
 
     def __str__(self):
-        mystr = "Session with train: {} eval: {} test: {}".format(
+        mystr = "Session {} with train: {} eval: {} test: {}".format(
+            self.name,
             self.data_provider.train_size,
             self.data_provider.eval_size,
             self.data_provider.test_size
@@ -105,16 +115,24 @@ def run_baseline():
     loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
-
-    very_small = Session("very_small_baseline",500, 100, 20, loader, BaselineEstimator())
+    estimator = BaselineEstimator()
+    very_small = Session("very_small_baseline",500, 100, 20, loader, estimator)
     #small = Session(3000, 100, 20, loader, estimator)
     #notso_small = Session(30000, 10000, 20, loader, estimator)
     #full = Session(0.7, 0.3, 100, loader, estimator)
-    for session in [very_small]:
-        print(session)
-        session.train()
-        session.evaluate()
-        preds = session.predict()
+    print(very_small)
+    very_small.train()
+    very_small.evaluate()
+    preds = very_small.predict()
+    print()
+    eval_500 = Session("very_small_baseline", 0, 500, 10, loader, estimator)
+    eval_500.evaluate()
+    eval_500.predict()
+    print()
+    eval_500 = Session("very_small_baseline", 0, 500, 10, loader, estimator)
+    eval_500.evaluate()
+    eval_500.predict()
+
 
 
 
