@@ -91,7 +91,7 @@ class BertEstimator(Estimator):
         and set as self.estimator
         """
         ## clean output
-        if tf.gfile.Exists(self.config.output_dir):
+        if num_train_examples > 0 and tf.gfile.Exists(self.config.output_dir):
             tf.gfile.DeleteRecursively(self.config.output_dir)
         ## make output
         tf.gfile.MakeDirs(self.config.output_dir)
