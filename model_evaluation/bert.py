@@ -267,7 +267,8 @@ class BertSession(Session):
         super().__init__(name, train_size, eval_size, test_size, data_loader, estimator)
         #patch output path
         estimator.config.output_dir = os.path.join(estimator.config.output_dir, name)
-        self.estimator.setup_estimator(len(self.data_provider.x_train), self.data_provider.get_labels())
+        num_train_examples = 0 if train_size == 0 else len(self.data_provider.x_train)
+        self.estimator.setup_estimator(num_train_examples, self.data_provider.get_labels())
 
     def train(self):
         X = self.data_provider.get_train_examples()
