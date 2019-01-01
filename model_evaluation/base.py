@@ -99,6 +99,16 @@ class Session():
         return mystr
 
 
+class Suite:
+    """
+
+    """
+    def __init__(self,name, sessions: [Session]):
+        self.name = name
+        self.sessions = sessions
+        self.results = None
+
+
 def run_baseline():
     loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)

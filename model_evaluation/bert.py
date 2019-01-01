@@ -75,7 +75,7 @@ class BertEstimator(Estimator):
         :param config: config params
         """
         self.config = config
-        tf.logging.set_verbosity(tf.logging.INFO)
+        tf.logging.set_verbosity(tf.logging.WARN)
 
         tokenization.validate_case_matches_checkpoint(self.config.do_lower_case,
                                                       self.config.init_checkpoint)
@@ -148,10 +148,10 @@ class BertEstimator(Estimator):
         train_file = os.path.join(self.config.output_dir, "train.tf_record")
         file_based_convert_examples_to_features(
             X, y, self.config.max_seq_length, self.tokenizer, train_file)
-        tf.logging.info("***** Running training *****")
-        tf.logging.info("  Num examples = %d", len(X))
-        tf.logging.info("  Batch size = %d", self.config.train_batch_size)
-        tf.logging.info("  Num steps = %d", self.num_train_steps)
+        tf.logging.warn("***** Running training *****")
+        tf.logging.warn("  Num examples = %d", len(X))
+        tf.logging.warn("  Batch size = %d", self.config.train_batch_size)
+        tf.logging.warn("  Num steps = %d", self.num_train_steps)
         train_input_fn = file_based_input_fn_builder(
             input_file=train_file,
             seq_length=self.config.max_seq_length,
@@ -175,11 +175,11 @@ class BertEstimator(Estimator):
         file_based_convert_examples_to_features(
             eval_examples, y, self.config.max_seq_length, self.tokenizer, eval_file)
 
-        tf.logging.info("***** Running evaluation *****")
-        tf.logging.info("  Num examples = %d (%d actual, %d padding)",
+        tf.logging.warn("***** Running evaluation *****")
+        tf.logging.warn("  Num examples = %d (%d actual, %d padding)",
                         len(eval_examples), num_actual_eval_examples,
                         len(eval_examples) - num_actual_eval_examples)
-        tf.logging.info("  Batch size = %d", self.config.eval_batch_size)
+        tf.logging.warn("  Batch size = %d", self.config.eval_batch_size)
 
         # This tells the estimator to run through the entire set.
         eval_steps = None
@@ -200,9 +200,9 @@ class BertEstimator(Estimator):
 
         output_eval_file = os.path.join(self.config.output_dir, "eval_results.txt")
         with tf.gfile.GFile(output_eval_file, "w") as writer:
-            tf.logging.info("***** Eval results *****")
+            tf.logging.warn("***** Eval results *****")
             for key in sorted(result.keys()):
-                tf.logging.info("  %s = %s", key, str(result[key]))
+                tf.logging.warn("  %s = %s", key, str(result[key]))
                 writer.write("%s = %s\n" % (key, str(result[key])))
 
     def predict(self, X, y=None):
@@ -221,11 +221,11 @@ class BertEstimator(Estimator):
                                                 self.config.max_seq_length, self.tokenizer,
                                                 predict_file)
 
-        tf.logging.info("***** Running prediction*****")
-        tf.logging.info("  Num examples = %d (%d actual, %d padding)",
+        tf.logging.warn("***** Running prediction*****")
+        tf.logging.warn("  Num examples = %d (%d actual, %d padding)",
                         len(predict_examples), num_actual_predict_examples,
                         len(predict_examples) - num_actual_predict_examples)
-        tf.logging.info("  Batch size = %d", self.config.predict_batch_size)
+        tf.logging.warn("  Batch size = %d", self.config.predict_batch_size)
 
         predict_drop_remainder = True if self.config.use_tpu else False
         predict_input_fn = file_based_input_fn_builder(
@@ -239,7 +239,7 @@ class BertEstimator(Estimator):
         output_predict_file = os.path.join(self.config.output_dir, "test_results.tsv")
         with tf.gfile.GFile(output_predict_file, "w") as writer:
             num_written_lines = 0
-            tf.logging.info("***** Predict results *****")
+            tf.logging.warn("***** Predict results *****")
             for (i, prediction) in enumerate(result):
                 probabilities = prediction["probabilities"]
                 if i >= num_actual_predict_examples:
@@ -257,6 +257,12 @@ class BertSession(Session):
     subclass of session which provides InputExamples and label list
     to bert estimator
     """
+
+    def __init__(self, train_size, eval_size, test_size, data_loader: data_preparation.DataLoader,
+                 estimator: Estimator):
+        super().__init__(train_size, eval_size, test_size, data_loader, estimator)
+        self.estimator.setup_estimator(len(self.data_provider.x_train), self.data_provider.get_labels())
+
     def train(self):
         X = self.data_provider.get_train_examples()
         y = self.data_provider.get_labels()
@@ -310,26 +316,28 @@ def run_bert_local():
         session.evaluate()
         session.predict()
 
+
+BERT_BASE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-12_H-768_A-12"
+BERT_LARGE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-24_H-1024_A-16"
+
 def run_bert_tpu():
     loader_conf = data_preparation.AmazonQADataLoaderConfig("/home/jloutz67/nlp_capstone")
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
     config = BertEstimatorConfig(
-        bert_pretrained_dir="gs://cloud-tpu-checkpoints/bert/uncased_L-12_H-768_A-12",
+        bert_pretrained_dir=BERT_LARGE_MODEL,
         output_dir="gs://nlpcapstone_bucket/output/bert/",
         tpu_name=os.environ["TPU_NAME"]
     )
-    estimator = BertEstimator(config)
-    very_small = BertSession(500, 100, 20, loader, estimator)
-    small = BertSession(1000, 100, 20, loader, estimator)
-    notso_small = BertSession(30000, 10000, 20, loader, estimator)
+    very_small = BertSession(500, 100, 20, loader, BertEstimator(config))
+    small = BertSession(1000, 100, 20, loader, BertEstimator(config))
+    notso_small = BertSession(30000, 10000, 20, loader, BertEstimator(config))
     #full = BertSession(0.7, 0.3, 100, loader, estimator)
     #for session in (very_small,small):
     session = very_small
     print("*********************************************************************************    NEW SESSION ******")
     print(session)
     print()
-    estimator.setup_estimator(len(session.data_provider.x_train), session.data_provider.get_labels())
     session.train()
     session.evaluate()
     session.predict()
