@@ -332,6 +332,7 @@ def run_bert_tpu():
     estimator.setup_estimator(len(session.data_provider.x_train), session.data_provider.get_labels())
     session.train()
     session.evaluate()
+    session.predict()
 
 if __name__=="__main__":
     #setup_estimator_test()
