@@ -114,7 +114,7 @@ class DataProvider:
     similar to DataProcessor in bert-base for preparing amazon qa data.
     provides data in a form expected from bert, ulmfit as well as sklearn classifiers.
     """
-    def __init__(self,name,train_size=200,eval_size=100, test_size=20):
+    def __init__(self,name,train_size=0,eval_size=0, test_size=0):
         self.name = name
         self.train_size = train_size
         self.eval_size = eval_size
