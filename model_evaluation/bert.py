@@ -320,17 +320,20 @@ def run_bert_tpu():
         tpu_name=os.environ["TPU_NAME"]
     )
     estimator = BertEstimator(config)
-    very_small = BertSession(200, 200, 20, loader, estimator)
-    small = BertSession(3000, 100, 20, loader, estimator)
-    #notso_small = BertSession(30000, 10000, 20, loader, estimator)
+    very_small = BertSession(500, 100, 20, loader, estimator)
+    small = BertSession(1000, 100, 20, loader, estimator)
+    notso_small = BertSession(30000, 10000, 20, loader, estimator)
     #full = BertSession(0.7, 0.3, 100, loader, estimator)
-    for session in (very_small, small):
-        print(session)
-        estimator.setup_estimator(len(session.data_provider.x_train), session.data_provider.get_labels())
-        session.train()
-        session.evaluate()
-        session.predict()
+    #for session in (very_small,small):
+    session = very_small
+    print("*********************************************************************************    NEW SESSION ******")
+    print(session)
+    print()
+    estimator.setup_estimator(len(session.data_provider.x_train), session.data_provider.get_labels())
+    session.train()
+    session.evaluate()
 
 if __name__=="__main__":
     #setup_estimator_test()
-    run_bert_local()
+    #run_bert_local()
+    run_bert_tpu()
