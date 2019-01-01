@@ -52,7 +52,7 @@ class BaselineEstimator(Estimator):
         t0 = time.time()
         preds = self.clf.predict(X)
         print("DONE in ", time.time() - t0)
-        return preds
+        return list(zip(preds,X))
 
 
 class Session():
@@ -85,7 +85,9 @@ class Session():
         if X is None:
             X = self.data_provider.x_test
         res = self.estimator.predict(X)
-        print("Predictions: ",res)##TODO
+        print("Predictions: ")
+        for pred in res:
+            print("{:<30}{:100}".format(pred[0],pred[1]))
         return res
 
     def __str__(self):
@@ -98,19 +100,19 @@ class Session():
 
 
 def run_baseline():
-    loader_conf = data_preparation.AmazonQADataLoaderConfig()
+    loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
     estimator = BaselineEstimator()
-    very_small = Session(200, 200, 20, loader, estimator)
-    small = Session(3000, 100, 20, loader, estimator)
-    notso_small = Session(30000, 10000, 20, loader, estimator)
-    full = Session(0.7, 0.3, 100, loader, estimator)
-    for session in (very_small,small,notso_small,full):
+    very_small = Session(500, 100, 20, loader, estimator)
+    #small = Session(3000, 100, 20, loader, estimator)
+    #notso_small = Session(30000, 10000, 20, loader, estimator)
+    #full = Session(0.7, 0.3, 100, loader, estimator)
+    for session in [very_small]:
         print(session)
         session.train()
         session.evaluate()
-        session.predict()
+        preds = session.predict()
 
 
 
