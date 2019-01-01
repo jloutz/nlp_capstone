@@ -59,16 +59,17 @@ class Session():
     """
     encapsulates a run through a processing pipeline with a sampled subset of data
     """
-    def __init__(self, train_size, eval_size, test_size,
+    def __init__(self,name, train_size, eval_size, test_size,
                  data_loader: data_preparation.DataLoader,
                  estimator:Estimator):
-        provider = data_preparation.DataProvider("provider",
+        provider = data_preparation.DataProvider(name,
                                                  train_size=train_size,
                                                  eval_size=eval_size,
                                                  test_size=test_size)
         provider.sample_from_data(data_loader.get_data())
         self.data_provider = provider
         self.estimator = estimator
+        self.name = name
 
     def train(self):
         X = self.data_provider.x_train
@@ -80,6 +81,7 @@ class Session():
         y = self.data_provider.y_eval
         res = self.estimator.evaluate(X,y)
         print("Evaluation result: ",res[2])##TODO
+        return res
 
     def predict(self, X = None):
         if X is None:
@@ -99,22 +101,12 @@ class Session():
         return mystr
 
 
-class Suite:
-    """
-
-    """
-    def __init__(self,name, sessions: [Session]):
-        self.name = name
-        self.sessions = sessions
-        self.results = None
-
-
 def run_baseline():
     loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
-    estimator = BaselineEstimator()
-    very_small = Session(500, 100, 20, loader, estimator)
+
+    very_small = Session("very_small_baseline",500, 100, 20, loader, BaselineEstimator())
     #small = Session(3000, 100, 20, loader, estimator)
     #notso_small = Session(30000, 10000, 20, loader, estimator)
     #full = Session(0.7, 0.3, 100, loader, estimator)
