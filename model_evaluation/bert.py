@@ -266,7 +266,8 @@ class BertSession(Session):
                  estimator: BertEstimator):
         super().__init__(name, train_size, eval_size, test_size, data_loader, estimator)
         #patch output path
-        estimator.config.output_dir = os.path.join(estimator.config.output_dir, name)
+        if os.path.split(estimator.config.output_dir)[1] != name:
+            estimator.config.output_dir = os.path.join(estimator.config.output_dir, name)
         num_train_examples = 0 if train_size == 0 else len(self.data_provider.x_train)
         self.estimator.setup_estimator(num_train_examples, self.data_provider.get_labels())
 
@@ -346,12 +347,12 @@ def run_bert_tpu():
         tpu_name=os.environ["TPU_NAME"]
     )
     estimator=BertEstimator(config)
-    very_small = BertSession("very_small_bert",500, 100, 20, loader, estimator)
-    print(very_small)
-    print()
-    very_small.train()
-    very_small.evaluate()
-    very_small.predict()
+    #very_small = BertSession("very_small_bert",500, 100, 20, loader, estimator)
+    #print(very_small)
+    #print()
+    #very_small.train()
+    #very_small.evaluate()
+    #very_small.predict()
     eval_500 = BertSession("very_small_bert", 0, 500, 0, loader, estimator)
     print(eval_500)
     print()
