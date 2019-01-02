@@ -242,13 +242,13 @@ class BertEstimator(Estimator):
                 break
             probs = [prob for prob in prediction["probabilities"]]
             data = []
-            data.append(X[i].text_a)
             data.append(X[i].label)
             data.append(y[numpy.argsort(probs)[::-1][0]])
-            data.extend(y)
+            data.append(X[i].text_a)
+            data.extend(probs)
             fulldata.append(data)
 
-        cols = ["text","true","pred"]
+        cols = ["true","pred","text"]
         cols.extend(y)
         df = pandas.DataFrame(data=fulldata,columns=cols)
         return df
