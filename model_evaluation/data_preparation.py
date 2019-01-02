@@ -153,7 +153,7 @@ class DataProvider:
 
         if len(X) < self.train_size + self.eval_size:
             raise Exception("not enough data...")
-        self.labels = set(y)
+        self.labels = list(set(y))
 
         ## make sizes absolute if percent
         if 0 < self.train_size < 1:
