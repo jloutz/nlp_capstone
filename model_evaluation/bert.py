@@ -240,8 +240,8 @@ class BertEstimator(Estimator):
 
         result = self.estimator.predict(input_fn=predict_input_fn)
 
-        output_predict_file = os.path.join(self.config.output_dir, "test_results.tsv")
-        with tf.gfile.GFile(output_predict_file, "w") as writer:
+        output_predict_file = os.path.join(self.config.output_dir, "test_results.pkl")
+        """with tf.gfile.GFile(output_predict_file, "w") as writer:
             num_written_lines = 0
             print("***** Predict results *****")
             for (i, prediction) in enumerate(result):
@@ -253,7 +253,10 @@ class BertEstimator(Estimator):
                     for class_probability in probabilities) + "\n"
                 writer.write(output_line)
                 num_written_lines += 1
-        assert num_written_lines == num_actual_predict_examples
+        assert num_written_lines == num_actual_predict_examples"""
+        import pickle
+        pickle.dump(result,output_predict_file)
+        return result
 
 
 class BertSession(Session):
@@ -294,7 +297,7 @@ class BertSession(Session):
                 print("test called although no test data exists in provider (was test_size 0?)")
                 return
         y = self.data_provider.get_labels()
-        self.estimator.predict(X, y)
+        return self.estimator.predict(X, y)
 
 def setup_estimator_test():
     loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
@@ -352,15 +355,15 @@ def run_bert_tpu():
     print()
     very_small.train()
     very_small.evaluate()
-    #very_small.predict()
-    eval_500 = BertSession("very_small_bert", 0, 500, 0, loader, estimator)
-    print(eval_500)
-    print()
-    eval_500.evaluate()
-    eval_500 = BertSession("very_small_bert", 0, 1500, 0, loader, estimator)
-    print(eval_500)
-    print()
-    eval_500.evaluate()
+    very_small.predict()
+    #eval_500 = BertSession("very_small_bert", 0, 500, 0, loader, estimator)
+    #print(eval_500)
+    #print()
+    #eval_500.evaluate()
+    #eval_500 = BertSession("very_small_bert", 0, 1500, 0, loader, estimator)
+    #print(eval_500)
+    #print()
+    #eval_500.evaluate()
 
 
 if __name__=="__main__":
