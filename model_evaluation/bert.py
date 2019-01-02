@@ -1,4 +1,7 @@
+import numpy
 import os
+
+import pandas
 
 import data_preparation as data_preparation
 from base import Estimator, Session
@@ -143,7 +146,6 @@ class BertEstimator(Estimator):
             train_batch_size=self.config.train_batch_size,
             eval_batch_size=self.config.eval_batch_size,
             predict_batch_size=self.config.predict_batch_size)
-
         self.estimator = estimator
         self.num_train_steps = num_train_steps
 
@@ -234,22 +236,19 @@ class BertEstimator(Estimator):
             drop_remainder=predict_drop_remainder)
 
         result = self.estimator.predict(input_fn=predict_input_fn)
-
-        output_predict_file = os.path.join(self.config.output_dir, "test_results.pkl")
-        with tf.gfile.GFile(output_predict_file, "w") as writer:
-            num_written_lines = 0
-            print("***** Predict results *****")
-            for (i, prediction) in enumerate(result):
-                probabilities = prediction["probabilities"]
-                if i >= num_actual_predict_examples:
-                    break
-                output_line = "\t".join(
-                    str(class_probability)
-                    for class_probability in probabilities) + "\n"
-                writer.write(output_line)
-                num_written_lines += 1
-        assert num_written_lines == num_actual_predict_examples
-        return result
+        data = []
+        for (i, prediction) in enumerate(result):
+            probs = [prob for prob in prediction["probabilities"]]
+            data.append(X[i].text_a)
+            data.append(X[i].label)
+            data.append(y[numpy.argsort(probs)[::-1][0]])
+            data.extend(y)
+            if i >= num_actual_predict_examples:
+                break
+        cols = ["text","true","pred"]
+        cols.extend(y)
+        df = pandas.DataFrame(data=data,columns=cols)
+        return df
 
     def __str__(self):
         return "Bert_Estimator_"+str(self.__hash__())
@@ -308,7 +307,7 @@ class BertSession(Session):
             print(self.prediction_results)
 
 
-    def persist(self,output_dir="/nlpcapstone_bucket/output/bert/"):
+    def persist(self,output_dir="/nlpcapstone_bucket/results/"):
         import os
         import pickle
         import cloudstorage as gcs
@@ -418,11 +417,12 @@ def run_bert_tpu():
     very_small.train()
     very_small.evaluate()
     very_small.predict()
-    eval500_data = data_preparation.DataProvider(0, 500, 0, loader.data)
+    eval500_data = data_preparation.DataProvider(0, 500, 6, loader.data)
     eval_500_session = BertSession(eval500_data, estimator)
     print(eval_500_session)
     #print()
     eval_500_session.evaluate()
+    eval_500_session.predict()
     return(very_small,eval_500_session)
 
 
