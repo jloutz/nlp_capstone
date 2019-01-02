@@ -236,15 +236,17 @@ class BertEstimator(Estimator):
             drop_remainder=predict_drop_remainder)
 
         result = self.estimator.predict(input_fn=predict_input_fn)
-        data = []
+        fulldata = []
         for (i, prediction) in enumerate(result):
             if i >= num_actual_predict_examples:
                 break
             probs = [prob for prob in prediction["probabilities"]]
+            data = []
             data.append(X[i].text_a)
             data.append(X[i].label)
             data.append(y[numpy.argsort(probs)[::-1][0]])
             data.extend(y)
+            fulldata.append(data)
 
         cols = ["text","true","pred"]
         cols.extend(y)
