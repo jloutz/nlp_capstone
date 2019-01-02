@@ -241,7 +241,7 @@ class BertEstimator(Estimator):
         result = self.estimator.predict(input_fn=predict_input_fn)
 
         output_predict_file = os.path.join(self.config.output_dir, "test_results.pkl")
-        """with tf.gfile.GFile(output_predict_file, "w") as writer:
+        with tf.gfile.GFile(output_predict_file, "w") as writer:
             num_written_lines = 0
             print("***** Predict results *****")
             for (i, prediction) in enumerate(result):
@@ -253,9 +253,7 @@ class BertEstimator(Estimator):
                     for class_probability in probabilities) + "\n"
                 writer.write(output_line)
                 num_written_lines += 1
-        assert num_written_lines == num_actual_predict_examples"""
-        import pickle
-        pickle.dump(result,output_predict_file)
+        assert num_written_lines == num_actual_predict_examples
         return result
 
 
