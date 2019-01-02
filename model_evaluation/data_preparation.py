@@ -114,8 +114,7 @@ class DataProvider:
     similar to DataProcessor in bert-base for preparing amazon qa data.
     provides data in a form expected from bert, ulmfit as well as sklearn classifiers.
     """
-    def __init__(self,name,train_size=0,eval_size=0, test_size=0):
-        self.name = name
+    def __init__(self,train_size=0,eval_size=0, test_size=0, data:dict=None):
         self.train_size = train_size
         self.eval_size = eval_size
         self.test_size = test_size
@@ -129,6 +128,9 @@ class DataProvider:
         self.dev_examples = None
         self.test_examples = None
         self.labels = None
+        self.data = data
+        if self.data is not None:
+            self.sample_from_data(self.data)
 
     def sample_from_data(self,data:dict,balance_classes = True):
         if self.train_size <= 0 and self.eval_size <= 0 and self.test_size <= 0:
@@ -165,10 +167,11 @@ class DataProvider:
         train_size = self.train_size if self.train_size > 0 else self.eval_size
         eval_size = self.eval_size if self.eval_size > 0 else self.train_size
 
-        ## train test split with stratify true if balance classes
-        dostrat = y if balance_classes else None
-        self.x_train, self.x_eval, self.y_train, self.y_eval = \
-            train_test_split(X,y,train_size=train_size,test_size=eval_size,stratify=dostrat)
+        if train_size > 0 or eval_size > 0:
+            ## train test split with stratify true if balance classes
+            dostrat = y if balance_classes else None
+            self.x_train, self.x_eval, self.y_train, self.y_eval = \
+                train_test_split(X,y,train_size=train_size,test_size=eval_size,stratify=dostrat)
 
         ## now erase train if no training size. (flag for do not train)
         if self.train_size <= 0:
@@ -242,7 +245,7 @@ def load_amazon_qa_data(local=True):
     conf = AmazonQADataLoaderConfig(proj_dir)
     loader = AmazonQADataLoader(conf=conf)
     loader.load(lazy=False)
-    provider = DataProvider("testProvider")
+    provider = DataProvider(500,100,20)
     provider.sample_from_data(loader.data)
     print(provider)
     return provider

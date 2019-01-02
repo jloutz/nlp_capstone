@@ -262,14 +262,15 @@ class BertSession(Session):
     subclass of session which provides InputExamples and label list
     to bert estimator
     """
-
-    def __init__(self, name, train_size, eval_size, test_size, data_loader: data_preparation.DataLoader,
-                 estimator: BertEstimator):
-        super().__init__(name, train_size, eval_size, test_size, data_loader, estimator)
+    def __init__(self, data_provider: data_preparation.DataProvider,
+                 estimator: BertEstimator, skip_train = False, name:str = "",):
+        super().__init__(data_provider, estimator, name)
+        if name:
+            name = name.strip()
         #patch output path
-        if os.path.split(estimator.config.output_dir)[1] != name:
+        if name and os.path.split(estimator.config.output_dir)[1] != name:
             estimator.config.output_dir = os.path.join(estimator.config.output_dir, name)
-        num_train_examples = 0 if train_size == 0 else len(self.data_provider.x_train)
+        num_train_examples = 0 if skip_train else len(self.data_provider.x_train)
         self.estimator.setup_estimator(num_train_examples, self.data_provider.get_labels())
 
     def train(self):
@@ -308,8 +309,8 @@ def setup_estimator_test():
         tpu_name=None
     )
     estimator = BertEstimator(config)
-    session = BertSession("setup_test",200, 200, 20, loader, estimator)
-    estimator.setup_estimator(len(session.data_provider.x_train), session.data_provider.get_labels())
+    provider = data_preparation.DataProvider(200, 200, 20,loader.data)
+    session = BertSession(provider, estimator,name="setup_test")
 
 
 def run_bert_local():
@@ -323,13 +324,17 @@ def run_bert_local():
         tpu_name=None
     )
     estimator = BertEstimator(config)
-    very_small = BertSession("vsb",200, 200, 20, loader, estimator)
-    small = BertSession("sb",3000, 100, 20, loader, estimator)
-    notso_small = BertSession("nssb",30000, 10000, 20, loader, estimator)
-    full = BertSession("full",0.7, 0.3, 100, loader, estimator)
-    for session in (very_small,small,notso_small,full):
+    very_small_data = data_preparation.DataProvider(200, 200, 20, loader.data)
+    small_data = data_preparation.DataProvider(3000, 100, 20, loader.data)
+    notso_small_data = data_preparation.DataProvider(30000, 10000, 20, loader.data)
+    full_data = data_preparation.DataProvider(0.7, 0.3, 100, loader.data)
+
+    very_small_session = BertSession(very_small_data, estimator,name="vs")
+    small_session = BertSession(small_data, estimator,name="s")
+    notso_small_session = BertSession(notso_small_data, estimator,name="nss")
+    full_session = BertSession(full_data, estimator,name="full")
+    for session in (very_small_session,small_session,notso_small_session,full_session):
         print(session)
-        estimator.setup_estimator(len(session.data_provider.x_train),session.data_provider.get_labels())
         session.train()
         session.evaluate()
         session.predict()
@@ -348,20 +353,19 @@ def run_bert_tpu():
         tpu_name=os.environ["TPU_NAME"]
     )
     estimator=BertEstimator(config)
-    very_small = BertSession("very_small_bert",500, 100, 20, loader, estimator)
+    very_small_data = data_preparation.DataProvider(500, 100, 20, loader.data)
+
+    very_small = BertSession(very_small_data, estimator,name="very_small_bert")
     print(very_small)
     print()
     very_small.train()
     very_small.evaluate()
     very_small.predict()
-    #eval_500 = BertSession("very_small_bert", 0, 500, 0, loader, estimator)
-    #print(eval_500)
+    eval500_data = data_preparation.DataProvider(0, 500, 0, loader.data)
+    eval_500_session = BertSession(eval500_data, estimator)
+    print(eval_500_session)
     #print()
-    #eval_500.evaluate()
-    #eval_500 = BertSession("very_small_bert", 0, 1500, 0, loader, estimator)
-    #print(eval_500)
-    #print()
-    #eval_500.evaluate()
+    eval_500_session.evaluate()
 
 
 if __name__=="__main__":

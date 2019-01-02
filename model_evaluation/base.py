@@ -47,7 +47,7 @@ class BaselineEstimator(Estimator):
         acc = accuracy_score(y,pred)
         return (y,pred,acc)
 
-    def predict(self, X):
+    def predict(self, X, y=None):
         print("START predictions")
         t0 = time.time()
         preds = self.clf.predict(X)
@@ -59,17 +59,14 @@ class Session():
     """
     encapsulates a run through a processing pipeline with a sampled subset of data
     """
-    def __init__(self,name, train_size, eval_size, test_size,
-                 data_loader: data_preparation.DataLoader,
-                 estimator:Estimator):
-        provider = data_preparation.DataProvider(name,
-                                                 train_size=train_size,
-                                                 eval_size=eval_size,
-                                                 test_size=test_size)
-        provider.sample_from_data(data_loader.get_data())
-        self.data_provider = provider
+    def __init__(self,
+                 data_provider:data_preparation.DataProvider,
+                 estimator:Estimator,
+                 name=""):
+        self.data_provider = data_provider
         self.estimator = estimator
         self.name = name
+
 
     def train(self):
         X = self.data_provider.x_train
@@ -115,8 +112,9 @@ def run_baseline():
     loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
+    very_small_data = data_preparation.DataProvider(500, 100, 20,loader.data)
     estimator = BaselineEstimator()
-    very_small = Session("very_small_baseline",500, 100, 20, loader, estimator)
+    very_small = Session(very_small_data, estimator,"very_small")
     #small = Session(3000, 100, 20, loader, estimator)
     #notso_small = Session(30000, 10000, 20, loader, estimator)
     #full = Session(0.7, 0.3, 100, loader, estimator)
@@ -124,16 +122,20 @@ def run_baseline():
     very_small.train()
     very_small.evaluate()
     preds = very_small.predict()
+    print(preds)
     print()
-    eval_500 = Session("very_small_baseline", 0, 500, 10, loader, estimator)
-    eval_500.evaluate()
-    eval_500.predict()
+    eval_500 = data_preparation.DataProvider(0, 500, 10, loader.data)
+    eval_500_session = Session(eval_500, estimator)
+    print(eval_500_session)
+    eval_500_session.evaluate()
+    eval_500_session.predict()
     print()
-    eval_500 = Session("very_small_baseline", 0, 500, 10, loader, estimator)
-    eval_500.evaluate()
-    eval_500.predict()
+    predict_40 = data_preparation.DataProvider(0, 0, 40, loader.data)
+    predict_40_session = Session( predict_40, estimator)
+    print(predict_40_session)
+    predict_40_session.predict()
 
-
+#run_baseline()
 
 
 
