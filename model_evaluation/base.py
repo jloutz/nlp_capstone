@@ -54,6 +54,10 @@ class BaselineEstimator(Estimator):
         print("DONE in ", time.time() - t0)
         return list(zip(preds,X))
 
+    def __str__(self):
+        return "Baseline_Estimator_"+str(self.__hash__())
+
+
 
 class Session():
     """
@@ -66,6 +70,8 @@ class Session():
         self.data_provider = data_provider
         self.estimator = estimator
         self.name = name
+        self.evaluation_results = None
+        self.prediction_results = None
 
 
     def train(self):
@@ -82,9 +88,8 @@ class Session():
         if X is None:
             print("evaluate called although no eval data exists in provider (was eval_size 0?)")
             return None
-        res = self.estimator.evaluate(X,y)
-        print("Evaluation result: ",res[2])##TODO
-        return res
+        self.evaluation_results = self.estimator.evaluate(X,y)
+
 
     def predict(self, X = None):
         if X is None:
@@ -92,19 +97,66 @@ class Session():
             if X is None:
                 print("predict called although no predict data exists in provider (was test_size 0?)")
                 return None
-        res = self.estimator.predict(X)
-        print("Predictions: ")
-        for pred in res:
-            print("{:<30}{:100}".format(pred[0],pred[1]))
-        return res
+        self.prediction_results = self.estimator.predict(X)
+
+
+    def show(self):
+        print()
+        if self.evaluation_results:
+            print("Evaluation results:")
+            print(self.evaluation_results)
+        if self.prediction_results:
+            print("Predictions: ")
+            for pred in self.prediction_results:
+                print("{:<30}{:100}".format(pred[0],pred[1]))
+
+
+    def persist(self,output_dir):
+        import os
+        import pickle
+        os.makedirs(output_dir,exist_ok=True)
+        output_path = os.path.join(output_dir,self.persist_name())
+        obj = {}
+        if self.data_provider.x_train:
+            obj["x_train"]=self.data_provider.x_train
+            obj["y_train"] = self.data_provider.y_train
+        if self.data_provider.x_eval:
+            obj["x_eval"] = self.data_provider.x_eval
+            obj["y_eval"] = self.data_provider.y_eval
+        if self.evaluation_results:
+            obj["evaluation_results"] = self.evaluation_results
+        if self.data_provider.x_test:
+            obj["x_test"] = self.data_provider.x_test
+            obj["y_test"] = self.data_provider.y_test
+        if self.prediction_results:
+            obj["prediction_results"] = self.prediction_results
+
+        with open(output_path,'wb') as f:
+            print("Dumping a big fat pickle to {}...".format(output_path))
+            pickle.dump(obj,f)
+            print("Done!")
+
+
+    def persist_name(self):
+        persist_name = self.__str__()
+        persist_name+= ".pkl"
+        return persist_name
+
 
     def __str__(self):
-        mystr = "Session {} with train: {} eval: {} test: {}".format(
-            self.name,
-            self.data_provider.train_size,
-            self.data_provider.eval_size,
-            self.data_provider.test_size
-        )
+        mystr = ""
+        if self.name:
+            mystr += self.name
+        mystr += "-{}".format(str(self.estimator))
+        if self.data_provider.x_train:
+            s = "-train" + str(len(self.data_provider.x_train))
+            mystr += s
+        if self.data_provider.x_eval:
+            s = "-eval" + str(len(self.data_provider.x_eval))
+            mystr += s
+        if self.data_provider.x_test:
+            s = "-test" + str(len(self.data_provider.x_test))
+            mystr += s
         return mystr
 
 

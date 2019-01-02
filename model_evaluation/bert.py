@@ -201,13 +201,8 @@ class BertEstimator(Estimator):
             drop_remainder=eval_drop_remainder)
 
         result = self.estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+        return result
 
-        output_eval_file = os.path.join(self.config.output_dir, "eval_results.txt")
-        with tf.gfile.GFile(output_eval_file, "w") as writer:
-            print("***** Eval results *****")
-            for key in sorted(result.keys()):
-                print("  %s = %s", key, str(result[key]))
-                writer.write("%s = %s\n" % (key, str(result[key])))
 
     def predict(self, X, y=None):
         predict_examples = X
@@ -256,6 +251,10 @@ class BertEstimator(Estimator):
         assert num_written_lines == num_actual_predict_examples
         return result
 
+    def __str__(self):
+        return "Bert_Estimator_"+str(self.__hash__())
+
+
 
 class BertSession(Session):
     """
@@ -287,7 +286,7 @@ class BertSession(Session):
         if X is None:
             print("evaluate called although no eval data exists in provider (was eval_size 0?)")
             return
-        self.estimator.evaluate(X, y)
+        self.evaluation_results = self.estimator.evaluate(X, y)
 
     def predict(self, X=None):
         if X is None:
@@ -296,7 +295,65 @@ class BertSession(Session):
                 print("test called although no test data exists in provider (was test_size 0?)")
                 return
         y = self.data_provider.get_labels()
-        return self.estimator.predict(X, y)
+        self.prediction_results = self.estimator.predict(X, y)
+
+
+    def show(self):
+        print()
+        if self.evaluation_results:
+            print("Evaluation results:")
+            print(self.evaluation_results)
+        if self.prediction_results:
+            print("Predictions: ")
+            print(self.prediction_results)
+
+
+    def persist(self,output_dir="/nlpcapstone_bucket/output/bert/"):
+        import os
+        import pickle
+        import cloudstorage as gcs
+        tf.gfile.MakeDirs(output_dir)
+        output_path = os.path.join(output_dir,self.persist_name())
+        obj = {}
+        if self.data_provider.train_examples:
+            obj["train_examples"]=self.data_provider.train_examples
+        if self.data_provider.dev_examples:
+            obj["eval_examples"] = self.data_provider.dev_examples
+        if self.evaluation_results:
+            obj["evaluation_results"] = self.evaluation_results
+        if self.data_provider.test_examples:
+            obj["test_examples"] = self.data_provider.test_examples
+        if self.prediction_results:
+            obj["prediction_results"] = self.prediction_results
+
+        with gcs.open(output_path) as f:
+            print("Dumping a big fat pickle to {}...".format(output_path))
+            pickle.dump(obj,f)
+            print("Done!")
+
+
+    def persist_name(self):
+        persist_name = self.__str__()
+        persist_name+= ".pkl"
+        return persist_name
+
+
+    def __str__(self):
+        mystr = ""
+        if self.name:
+            mystr += self.name
+        mystr += "-{}".format(str(self.estimator))
+        if self.data_provider.x_train:
+            s = "-train" + str(len(self.data_provider.x_train))
+            mystr += s
+        if self.data_provider.x_eval:
+            s = "-eval" + str(len(self.data_provider.x_eval))
+            mystr += s
+        if self.data_provider.x_test:
+            s = "-test" + str(len(self.data_provider.x_test))
+            mystr += s
+        return mystr
+
 
 def setup_estimator_test():
     loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
@@ -366,6 +423,7 @@ def run_bert_tpu():
     print(eval_500_session)
     #print()
     eval_500_session.evaluate()
+    return(very_small,eval_500_session)
 
 
 if __name__=="__main__":
