@@ -263,14 +263,14 @@ class BertSession(Session):
     to bert estimator
     """
     def __init__(self, data_provider: data_preparation.DataProvider,
-                 estimator: BertEstimator, skip_train = False, name:str = "",):
+                 estimator: BertEstimator, name:str = "",):
         super().__init__(data_provider, estimator, name)
         if name:
             name = name.strip()
         #patch output path
         if name and os.path.split(estimator.config.output_dir)[1] != name:
             estimator.config.output_dir = os.path.join(estimator.config.output_dir, name)
-        num_train_examples = 0 if skip_train else len(self.data_provider.x_train)
+        num_train_examples = 0 if self.data_provider.x_train is None else len(self.data_provider.x_train)
         self.estimator.setup_estimator(num_train_examples, self.data_provider.get_labels())
 
     def train(self):
