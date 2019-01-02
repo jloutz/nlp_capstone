@@ -250,7 +250,7 @@ class BertEstimator(Estimator):
 
         cols = ["text","true","pred"]
         cols.extend(y)
-        df = pandas.DataFrame(data=data,columns=cols)
+        df = pandas.DataFrame(data=fulldata,columns=cols)
         return df
 
     def __str__(self):
