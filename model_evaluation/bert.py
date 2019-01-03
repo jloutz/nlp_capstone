@@ -6,7 +6,7 @@ import os
 import pandas
 
 import data_preparation as data_preparation
-from base import Estimator, Session
+from base import Estimator, Session, BaselineEstimator
 
 import modeling
 import tokenization
@@ -68,8 +68,6 @@ class BertEstimatorConfig:
         self.gcp_project = None
         "Only used if `use_tpu` is True. Total number of TPU cores to use."
         self.num_tpu_cores = 8
-
-
 
 
 class BertEstimator(Estimator):
@@ -262,7 +260,6 @@ class BertEstimator(Estimator):
         return "Bert_Estimator_{}".format(self.id)
 
 
-
 class BertSession(Session):
     """
     subclass of session which provides InputExamples and label list
@@ -391,7 +388,7 @@ def run_bert_local():
 BERT_BASE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-12_H-768_A-12"
 BERT_LARGE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-24_H-1024_A-16"
 
-def run_bert_tpu():
+def run_bert_tpu(testrun=False,loop=1):
     loader_conf = data_preparation.AmazonQADataLoaderConfig("/home/jloutz67/nlp_capstone")
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
@@ -400,31 +397,62 @@ def run_bert_tpu():
         output_dir="gs://nlpcapstone_bucket/output/bert/",
         tpu_name=os.environ["TPU_NAME"]
     )
-    sessions = []
-    estimator=BertEstimator(config)
-    dp = data_preparation.DataProvider(loader.data, 10000, 200, 100)
-    sess = BertSession(dp, estimator,name="big-10000")
-    print(sess)
-    print()
-    sess.train()
-    sess.evaluate()
-    print(sess.evaluation_results)
-    sess.predict()
-    print(sess.prediction_results)
-    sessions.append(sess)
+    bert_sessions = []
+    baseline_sessions = []
 
-    dp = data_preparation.DataProvider(loader.data, 100, 20, 100)
-    sess = BertSession(dp, estimator, name="mini-100")
-    print(sess)
-    print()
-    sess.train()
-    sess.evaluate()
-    print(sess.evaluation_results)
-    sess.predict()
-    print(sess.prediction_results)
-    sessions.append(sess)
+    if testrun:
+        datasets = [("small-450",450,150,100)]
+    else:
+        datasets = [("lrg-3000",3000,1000,100),("med-900",900,300,100),("small-600",600,200,100),("small-450",450,150,100),("small-300",300,100,100),("small-150",150,50,100)]
 
-    return sessions
+    for dataset in datasets:
+        for i in range(loop):
+            ##bert
+            bert_estimator=BertEstimator(config)
+            dp = data_preparation.DataProvider(loader.data, dataset[1], dataset[2], dataset[3])
+            bert_session = BertSession(dp, bert_estimator,name=dataset[0])
+            print(bert_session)
+            print()
+            bert_session.train()
+            bert_session.evaluate()
+            print(bert_session.evaluation_results)
+            bert_session.predict()
+            #print(bert_session.prediction_results)
+            bert_sessions.append(bert_session)
+            ## baseline
+            baseline_estimator = BaselineEstimator()
+            baseline_session = Session(dp,baseline_estimator,dataset[0])
+            print(baseline_session)
+            print()
+            baseline_session.train()
+            baseline_session.evaluate()
+            print(baseline_session.evaluation_results[2])
+            baseline_session.predict()
+            #print(baseline_session.prediction_results)
+            baseline_sessions.append(baseline_session)
+    return (bert_sessions,baseline_sessions)
+
+def persist_session(session, output_dir="gs://nlpcapstone_bucket/sessions/"):
+    import os
+    import pickle
+    tf.gfile.MakeDirs(output_dir)
+    output_path = os.path.join(output_dir, session.persist_name())
+    obj = {}
+    if session.data_provider.train_examples:
+        obj["train_examples"]=session.data_provider.train_examples
+    if session.data_provider.dev_examples:
+        obj["eval_examples"] = session.data_provider.dev_examples
+    if session.evaluation_results:
+        obj["evaluation_results"] = session.evaluation_results
+    if session.data_provider.test_examples:
+        obj["test_examples"] = session.data_provider.test_examples
+    if session.prediction_results is not None:
+        obj["prediction_results"] = session.prediction_results
+
+    with tf.gfile.GFile(output_path, "w") as f:
+        print("Dumping a big fat pickle to {}...".format(output_path))
+        pickle.dump(obj,f)
+        print("Done!")
 
 
 

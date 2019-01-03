@@ -7,7 +7,7 @@ from sklearn.externals import joblib
 from sklearn.model_selection import train_test_split
 # bert-master
 import tokenization
-from run_classifier import DataProcessor, InputExample
+from run_classifier import InputExample, PaddingInputExample
 
 
 class DataLoader():
@@ -115,7 +115,7 @@ class DataProvider:
     similar to DataProcessor in bert-base for preparing amazon qa data.
     provides data in a form expected from bert, ulmfit as well as sklearn classifiers.
     """
-    def __init__(self,data:dict,train_size=0,eval_size=0, test_size=0):
+    def __init__(self,data:dict=None,train_size=0,eval_size=0, test_size=0):
         self.train_size = train_size
         self.eval_size = eval_size
         self.test_size = test_size
@@ -130,8 +130,54 @@ class DataProvider:
         self.test_examples = None
         self.labels = None
         self.data = data
-        self._sample_from_data(self.data)
+        if data is not None:
+            self._sample_from_data(self.data)
         self.id = uuid.uuid4().hex
+
+    @classmethod
+    def provider_from_prepared_data(cls,x_train, y_train, x_eval, y_eval, x_test, y_test):
+        """
+        need this to rehydrate sessions for baseline using persisted bert sessions... unfortunately..
+        :return: provider
+        """
+        provider = DataProvider()
+        provider.x_train = x_train
+        provider.train_size = len(x_train)
+        provider.y_train = y_train
+        provider.labels = list(set(y_train))
+        provider.x_eval = x_eval
+        provider.eval_size = len(x_eval)
+        provider.y_eval = y_eval
+        provider.x_test = x_test
+        provider.test_size = len(x_test)
+        provider.y_test = y_test
+        return provider
+
+    @classmethod
+    def provider_from_input_examples(cls,train_examples:[InputExample],eval_examples:[InputExample],test_examples:[InputExample]):
+        """
+        need this to rehydrate sessions for baseline using persisted bert sessions... unfortunately..
+        :return: provider
+        """
+        xy_tup = [(ex.text_a, ex.label) for ex in train_examples if type(ex) is not PaddingInputExample]
+        xy = list(zip(*xy_tup))
+        x_train = xy[0]
+        y_train = xy[1]
+
+        xy_tup = [(ex.text_a, ex.label) for ex in eval_examples if type(ex) is not PaddingInputExample]
+        xy = list(zip(*xy_tup))
+        x_eval = xy[0]
+        y_eval = xy[1]
+
+        xy_tup = [(ex.text_a, ex.label) for ex in test_examples if type(ex) is not PaddingInputExample]
+        xy = list(zip(*xy_tup))
+        x_test = xy[0]
+        y_test = xy[1]
+        provider = cls.provider_from_prepared_data(x_train,y_train,x_eval,y_eval,x_test,y_test)
+        #provider.train_examples=train_examples
+        #provider.dev_examples=eval_examples
+        #provider.test_examples=test_examples
+        return provider
 
     def _sample_from_data(self,data:dict,balance_classes = True):
         if self.train_size <= 0 and self.eval_size <= 0 and self.test_size <= 0:
