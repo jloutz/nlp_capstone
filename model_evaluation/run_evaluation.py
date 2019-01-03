@@ -33,10 +33,10 @@ def generate_and_persist_datasuite():
 
 
 LOCAL_SUITES_DIR = "C:/Projects/udacity-capstone/data/suites"
-GCP_SUITES_DIR = "/nlpcapstone_bucket/suites"
+GCP_SUITES_DIR = "gs://nlpcapstone_bucket/suites"
 
 LOCAL_SESSIONS_DIR = "C:/Projects/udacity-capstone/results/sessions"
-GCP_SESSIONS_DIR = "/nlpcapstone_bucket/sessions"
+GCP_SESSIONS_DIR = "gs://nlpcapstone_bucket/sessions"
 
 
 def persist_sessions(sessions,output_dir):

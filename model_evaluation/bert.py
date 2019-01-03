@@ -315,7 +315,7 @@ class BertSession(Session):
             print(self.prediction_results)
 
 
-    def persist(self,output_dir="/nlpcapstone_bucket/sessions/"):
+    def persist(self,output_dir="gs://nlpcapstone_bucket/sessions/"):
         import os
         import pickle
         tf.gfile.MakeDirs(output_dir)
