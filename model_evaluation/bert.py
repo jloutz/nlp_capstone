@@ -295,7 +295,7 @@ class BertSession(Session):
             return
         self.evaluation_results = self.estimator.evaluate(X, y)
 
-    def predict(self, X=None):
+    def predict(self, X=None, y=None):
         if X is None:
             X = self.data_provider.get_test_examples()
             if X is None:
@@ -318,7 +318,6 @@ class BertSession(Session):
     def persist(self,output_dir="/nlpcapstone_bucket/sessions/"):
         import os
         import pickle
-        import cloudstorage as gcs
         tf.gfile.MakeDirs(output_dir)
         output_path = os.path.join(output_dir,self.persist_name())
         obj = {}
@@ -333,7 +332,7 @@ class BertSession(Session):
         if self.prediction_results:
             obj["prediction_results"] = self.prediction_results
 
-        with gcs.open(output_path) as f:
+        with tf.gfile.GFile(output_path, "w") as f:
             print("Dumping a big fat pickle to {}...".format(output_path))
             pickle.dump(obj,f)
             print("Done!")
