@@ -61,10 +61,10 @@ def run_suite_with_baseline(filename):
     return sessions
 
 def run_suite_with_bert(filename):
-    import cloudstorage as gcs
     import pickle
+    import tensorflow as tf
     suite_path = os.path.join(GCP_SUITES_DIR,filename)
-    with gcs.open(suite_path) as f:
+    with tf.gfile.GFile(suite_path,'r') as f:
         suite = pickle.load(f)
     config = BertEstimatorConfig(
         bert_pretrained_dir=BERT_LARGE_MODEL,
