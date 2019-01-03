@@ -400,26 +400,32 @@ def run_bert_tpu():
         output_dir="gs://nlpcapstone_bucket/output/bert/",
         tpu_name=os.environ["TPU_NAME"]
     )
+    sessions = []
     estimator=BertEstimator(config)
-    very_small_data = data_preparation.DataProvider(loader.data, 500, 100, 20)
-
-    very_small = BertSession(very_small_data, estimator,name="very_small_bert")
-    print(very_small)
+    dp = data_preparation.DataProvider(loader.data, 500, 100, 100)
+    sess = BertSession(dp, estimator,name="small500")
+    print(sess)
     print()
-    very_small.train()
-    very_small.evaluate()
-    print(very_small.evaluation_results)
-    very_small.predict()
-    print(very_small.prediction_results)
-    eval500_data = data_preparation.DataProvider(loader.data, 0, 500, 6)
-    eval_500_session = BertSession(eval500_data, estimator)
-    print(eval_500_session)
-    #print()
-    eval_500_session.evaluate()
-    print(eval_500_session.evaluation_results)
-    eval_500_session.predict()
-    print(eval_500_session.prediction_results)
-    return(very_small,eval_500_session)
+    sess.train()
+    sess.evaluate()
+    print(sess.evaluation_results)
+    sess.predict()
+    print(sess.prediction_results)
+    sessions.append(sess)
+
+    dp = data_preparation.DataProvider(loader.data, 300, 60, 100)
+    sess = BertSession(dp, estimator, name="small300")
+    print(sess)
+    print()
+    sess.train()
+    sess.evaluate()
+    print(sess.evaluation_results)
+    sess.predict()
+    print(sess.prediction_results)
+    sessions.append(sess)
+
+    return sessions
+
 
 
 if __name__=="__main__":
