@@ -402,8 +402,8 @@ def run_bert_tpu():
     )
     sessions = []
     estimator=BertEstimator(config)
-    dp = data_preparation.DataProvider(loader.data, 1000, 200, 100)
-    sess = BertSession(dp, estimator,name="med-1000")
+    dp = data_preparation.DataProvider(loader.data, 10000, 200, 100)
+    sess = BertSession(dp, estimator,name="big-10000")
     print(sess)
     print()
     sess.train()
@@ -413,8 +413,8 @@ def run_bert_tpu():
     print(sess.prediction_results)
     sessions.append(sess)
 
-    dp = data_preparation.DataProvider(loader.data, 200, 40, 100)
-    sess = BertSession(dp, estimator, name="small-200")
+    dp = data_preparation.DataProvider(loader.data, 100, 20, 100)
+    sess = BertSession(dp, estimator, name="mini-100")
     print(sess)
     print()
     sess.train()
