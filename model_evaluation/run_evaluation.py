@@ -20,8 +20,8 @@ def data_suite(loader):
         "very_small":data_preparation.DataProvider(loader.data, 200, 500, 50),
         "small":data_preparation.DataProvider(loader.data, 500, 500, 50),
         "med":data_preparation.DataProvider(loader.data, 1000, 500, 50),
-        "large":data_preparation.DataProvider(loader.data, 5000, 500, 50),
-        "larger":data_preparation.DataProvider(loader.data, 50000, 500, 50)
+        "large":data_preparation.DataProvider(loader.data, 5000, 500, 50)#,
+        #"larger":data_preparation.DataProvider(loader.data, 50000, 500, 50)
     }
     return suite
 
@@ -60,7 +60,9 @@ def run_suite_with_baseline(filename):
         sessions.append(session)
     return sessions
 
-def run_suite_with_bert(filename):
+def run_suite_with_bert(filename, datasets=None):
+    ## datasets - tuple of datasets to run
+    ## ex. ('mini','large')
     import pickle
     import tensorflow as tf
     suite_path = os.path.join(GCP_SUITES_DIR,filename)
@@ -71,16 +73,26 @@ def run_suite_with_bert(filename):
         output_dir="gs://nlpcapstone_bucket/output/bert/",
         tpu_name=os.environ["TPU_NAME"]
     )
-    estimator = BertEstimator(config)
 
     sessions = []
     for (name,data) in suite.items():
-        session = BertSession(data, estimator, name)
+        if datasets is not None and name not in datasets:
+            continue
+        session = BertSession(data, BertEstimator(config), name)
         print(session)
         session.train()
         session.evaluate()
         session.predict()
         sessions.append(session)
     return sessions
+
+def get_suite_gcp(suitename):
+    import pickle
+    import tensorflow as tf
+    suite_path = os.path.join(GCP_SUITES_DIR, suitename)
+    with tf.gfile.GFile(suite_path, 'rb') as f:
+        suite = pickle.load(f)
+    return suite
+
 
 

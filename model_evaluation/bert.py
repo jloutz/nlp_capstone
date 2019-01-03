@@ -329,7 +329,7 @@ class BertSession(Session):
             obj["evaluation_results"] = self.evaluation_results
         if self.data_provider.test_examples:
             obj["test_examples"] = self.data_provider.test_examples
-        if self.prediction_results:
+        if self.prediction_results is not None:
             obj["prediction_results"] = self.prediction_results
 
         with tf.gfile.GFile(output_path, "w") as f:
