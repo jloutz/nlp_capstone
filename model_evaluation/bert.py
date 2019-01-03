@@ -343,7 +343,7 @@ class BertSession(Session):
         return persist_name
 
     def __str__(self):
-        return super(self,BertSession).__str__()
+        return super().__str__()
 
 
 def setup_estimator_test():
