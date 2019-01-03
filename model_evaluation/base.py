@@ -1,4 +1,10 @@
+import uuid
+
+import numpy
 import time
+
+import pandas
+
 import data_preparation as data_preparation
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
@@ -31,7 +37,7 @@ class BaselineEstimator(Estimator):
         ##TODO param grid
         #params = {"featurizer_ngram_range":[(1,1),(1,2)]}
         self.clf = GridSearchCV(pipeline,{})
-
+        self.id = uuid.uuid5(uuid.NAMESPACE_OID,str(self.clf)).hex
 
     def train(self, X, y):
         print("START training (fit)..")
@@ -50,12 +56,26 @@ class BaselineEstimator(Estimator):
     def predict(self, X, y=None):
         print("START predictions")
         t0 = time.time()
-        preds = self.clf.predict(X)
+        predprobs = self.clf.predict_proba(X)
+        classes = self.clf.classes_
+
+        fulldata = []
+        for i,predprob in enumerate(predprobs):
+            data = []
+            data.append(y[i])
+            data.append(classes[numpy.argsort(predprob)[::-1][0]])
+            data.append(X[i])
+            data.extend(predprob)
+            fulldata.append(data)
+
+        cols = ["true", "pred", "text"]
+        cols.extend(classes)
+        df = pandas.DataFrame(data=fulldata, columns=cols)
         print("DONE in ", time.time() - t0)
-        return list(zip(preds,X))
+        return df
 
     def __str__(self):
-        return "Baseline_Estimator_"+str(self.__hash__())
+        return "Baseline_Estimator_{}".format(self.id)
 
 
 
@@ -91,13 +111,14 @@ class Session():
         self.evaluation_results = self.estimator.evaluate(X,y)
 
 
-    def predict(self, X = None):
+    def predict(self, X = None,y=None):
         if X is None:
             X = self.data_provider.x_test
+            y = self.data_provider.y_test
             if X is None:
                 print("predict called although no predict data exists in provider (was test_size 0?)")
                 return None
-        self.prediction_results = self.estimator.predict(X)
+        self.prediction_results = self.estimator.predict(X,y)
 
 
     def show(self):
@@ -128,7 +149,7 @@ class Session():
         if self.data_provider.x_test:
             obj["x_test"] = self.data_provider.x_test
             obj["y_test"] = self.data_provider.y_test
-        if self.prediction_results:
+        if self.prediction_results is not None:
             obj["prediction_results"] = self.prediction_results
 
         with open(output_path,'wb') as f:
@@ -144,19 +165,10 @@ class Session():
 
 
     def __str__(self):
-        mystr = ""
+        mystr = "Session-"
         if self.name:
-            mystr += self.name
-        mystr += "-{}".format(str(self.estimator))
-        if self.data_provider.x_train:
-            s = "-train" + str(len(self.data_provider.x_train))
-            mystr += s
-        if self.data_provider.x_eval:
-            s = "-eval" + str(len(self.data_provider.x_eval))
-            mystr += s
-        if self.data_provider.x_test:
-            s = "-test" + str(len(self.data_provider.x_test))
-            mystr += s
+            mystr += self.name+"-"
+        mystr += "{0}-{1}".format(str(self.estimator),str(self.data_provider))
         return mystr
 
 
@@ -164,30 +176,36 @@ def run_baseline():
     loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
-    very_small_data = data_preparation.DataProvider(500, 100, 20,loader.data)
+    very_small_data = data_preparation.DataProvider(loader.data, 100, 500, 500)
     estimator = BaselineEstimator()
     very_small = Session(very_small_data, estimator,"very_small")
-    #small = Session(3000, 100, 20, loader, estimator)
-    #notso_small = Session(30000, 10000, 20, loader, estimator)
-    #full = Session(0.7, 0.3, 100, loader, estimator)
     print(very_small)
     very_small.train()
     very_small.evaluate()
     preds = very_small.predict()
     print(preds)
     print()
-    eval_500 = data_preparation.DataProvider(0, 500, 10, loader.data)
+    eval_500 = data_preparation.DataProvider(loader.data, 500, 500, 500)
     eval_500_session = Session(eval_500, estimator)
     print(eval_500_session)
+    eval_500_session.train()
     eval_500_session.evaluate()
     eval_500_session.predict()
     print()
-    predict_40 = data_preparation.DataProvider(0, 0, 40, loader.data)
+    predict_40 = data_preparation.DataProvider(loader.data, 20000, 5000, 500)
     predict_40_session = Session( predict_40, estimator)
     print(predict_40_session)
+    predict_40_session.train()
+    predict_40_session.evaluate()
     predict_40_session.predict()
+    full = data_preparation.DataProvider(loader.data, 0.7, 0.3, 500)
+    full_session = Session(full, estimator)
+    print(full_session)
+    full_session.train()
+    full_session.evaluate()
+    full_session.predict()
+    return(very_small,eval_500_session,predict_40_session,full_session)
 
-#run_baseline()
 
 
 

@@ -1,3 +1,5 @@
+import uuid
+
 import numpy
 import os
 
@@ -68,6 +70,8 @@ class BertEstimatorConfig:
         self.num_tpu_cores = 8
 
 
+
+
 class BertEstimator(Estimator):
     """
     rework of bert-base run_classifier
@@ -78,6 +82,7 @@ class BertEstimator(Estimator):
         :param config: config params
         """
         self.config = config
+        self.id = uuid.uuid5(uuid.NAMESPACE_OID,str(config.__dict__)).hex
         tf.logging.set_verbosity(tf.logging.ERROR)
 
         tokenization.validate_case_matches_checkpoint(self.config.do_lower_case,
@@ -254,7 +259,7 @@ class BertEstimator(Estimator):
         return df
 
     def __str__(self):
-        return "Bert_Estimator_"+str(self.__hash__())
+        return "Bert_Estimator_{}".format(self.id)
 
 
 
@@ -310,7 +315,7 @@ class BertSession(Session):
             print(self.prediction_results)
 
 
-    def persist(self,output_dir="/nlpcapstone_bucket/results/"):
+    def persist(self,output_dir="/nlpcapstone_bucket/sessions/"):
         import os
         import pickle
         import cloudstorage as gcs
@@ -333,28 +338,13 @@ class BertSession(Session):
             pickle.dump(obj,f)
             print("Done!")
 
-
     def persist_name(self):
         persist_name = self.__str__()
         persist_name+= ".pkl"
         return persist_name
 
-
     def __str__(self):
-        mystr = ""
-        if self.name:
-            mystr += self.name
-        mystr += "-{}".format(str(self.estimator))
-        if self.data_provider.x_train:
-            s = "-train" + str(len(self.data_provider.x_train))
-            mystr += s
-        if self.data_provider.x_eval:
-            s = "-eval" + str(len(self.data_provider.x_eval))
-            mystr += s
-        if self.data_provider.x_test:
-            s = "-test" + str(len(self.data_provider.x_test))
-            mystr += s
-        return mystr
+        return super(self,BertSession).__str__()
 
 
 def setup_estimator_test():
@@ -412,7 +402,7 @@ def run_bert_tpu():
         tpu_name=os.environ["TPU_NAME"]
     )
     estimator=BertEstimator(config)
-    very_small_data = data_preparation.DataProvider(500, 100, 20, loader.data)
+    very_small_data = data_preparation.DataProvider(loader.data, 500, 100, 20)
 
     very_small = BertSession(very_small_data, estimator,name="very_small_bert")
     print(very_small)
@@ -420,7 +410,7 @@ def run_bert_tpu():
     very_small.train()
     very_small.evaluate()
     very_small.predict()
-    eval500_data = data_preparation.DataProvider(0, 500, 6, loader.data)
+    eval500_data = data_preparation.DataProvider(loader.data, 0, 500, 6)
     eval_500_session = BertSession(eval500_data, estimator)
     print(eval_500_session)
     #print()

@@ -1,6 +1,7 @@
 import os
 import gzip
 import random
+import uuid
 ## sklearn
 from sklearn.externals import joblib
 from sklearn.model_selection import train_test_split
@@ -114,7 +115,7 @@ class DataProvider:
     similar to DataProcessor in bert-base for preparing amazon qa data.
     provides data in a form expected from bert, ulmfit as well as sklearn classifiers.
     """
-    def __init__(self,train_size=0,eval_size=0, test_size=0, data:dict=None):
+    def __init__(self,data:dict,train_size=0,eval_size=0, test_size=0):
         self.train_size = train_size
         self.eval_size = eval_size
         self.test_size = test_size
@@ -129,10 +130,10 @@ class DataProvider:
         self.test_examples = None
         self.labels = None
         self.data = data
-        if self.data is not None:
-            self.sample_from_data(self.data)
+        self._sample_from_data(self.data)
+        self.id = uuid.uuid4().hex
 
-    def sample_from_data(self,data:dict,balance_classes = True):
+    def _sample_from_data(self,data:dict,balance_classes = True):
         if self.train_size <= 0 and self.eval_size <= 0 and self.test_size <= 0:
             raise Exception("Please select size of train, eval, or test sets (at least one of them)")
         ## take train and eval samples from data
@@ -157,11 +158,11 @@ class DataProvider:
 
         ## make sizes absolute if percent
         if 0 < self.train_size < 1:
-            self.train_size = self.train_size * len(X)
-            self.eval_size = len(X)-self.train_size
+            self.train_size = int(self.train_size * len(X))
+            self.eval_size = int(len(X)-self.train_size)
         elif 0 < self.eval_size < 1:
-            self.eval_size = self.eval_size * len(X)
-            self.train_size = len(X) - self.eval_size
+            self.eval_size = int(self.eval_size * len(X))
+            self.train_size = int(len(X) - self.eval_size)
 
         ## balance sizes if one of them is zero (needed for input to train test split)
         train_size = self.train_size if self.train_size > 0 else self.eval_size
@@ -234,7 +235,13 @@ class DataProvider:
         return self.labels
 
     def __str__(self):
-        return  "provider to string...TODO"
+        mystr = "DataProvider-{0}-Train{1}-Eval{2}-Test{3}".format(self.id,
+                                                                   str(self.train_size),
+                                                                   str(self.eval_size),
+                                                                   str(self.test_size))
+        return mystr
+
+
 
 def load_amazon_qa_data(local=True):
     if local:
@@ -245,8 +252,7 @@ def load_amazon_qa_data(local=True):
     conf = AmazonQADataLoaderConfig(proj_dir)
     loader = AmazonQADataLoader(conf=conf)
     loader.load(lazy=False)
-    provider = DataProvider(500,100,20)
-    provider.sample_from_data(loader.data)
+    provider = DataProvider(loader.data,500,100,20)
     print(provider)
     return provider
 
