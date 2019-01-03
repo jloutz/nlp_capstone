@@ -180,9 +180,9 @@ class DataProvider:
             self.y_train = None
 
         ## now erase eval if no eval size. (flag for do not eval)
-        if self.train_size <= 0:
-            self.x_train = None
-            self.y_train = None
+        if self.eval_size <= 0:
+            self.x_eval = None
+            self.y_eval = None
 
         ## now make test samples.
         if self.test_size > 0:

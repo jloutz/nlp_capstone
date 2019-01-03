@@ -408,13 +408,17 @@ def run_bert_tpu():
     print()
     very_small.train()
     very_small.evaluate()
+    print(very_small.evaluation_results)
     very_small.predict()
+    print(very_small.prediction_results)
     eval500_data = data_preparation.DataProvider(loader.data, 0, 500, 6)
     eval_500_session = BertSession(eval500_data, estimator)
     print(eval_500_session)
     #print()
     eval_500_session.evaluate()
+    print(eval_500_session.evaluation_results)
     eval_500_session.predict()
+    print(eval_500_session.prediction_results)
     return(very_small,eval_500_session)
 
 

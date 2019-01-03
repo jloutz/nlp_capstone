@@ -86,6 +86,25 @@ def run_suite_with_bert(filename, datasets=None):
         sessions.append(session)
     return sessions
 
+
+def run_dataset_with_bert(dataset:data_preparation.DataProvider,name="test"):
+
+    config = BertEstimatorConfig(
+        bert_pretrained_dir=BERT_LARGE_MODEL,
+        output_dir="gs://nlpcapstone_bucket/output/bert/",
+        tpu_name=os.environ["TPU_NAME"]
+    )
+    estimator = BertEstimator(config)
+    session = BertSession(dataset, estimator, name)
+    print(session)
+    session.train()
+    session.evaluate()
+    print(session.evaluation_results)
+    session.predict()
+    print(session.prediction_results)
+    return session
+
+
 def get_suite_gcp(suitename):
     import pickle
     import tensorflow as tf
