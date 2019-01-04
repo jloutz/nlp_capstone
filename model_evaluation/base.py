@@ -171,25 +171,29 @@ class Session():
 
 
 def run_baseline():
+    sessions = []
     loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
-    very_small_data = data_preparation.DataProvider(loader.data, 100, 500, 500)
+    dp = data_preparation.DataProvider(loader.data, 150, 50, 100)
     estimator = BaselineEstimator()
-    very_small = Session(very_small_data, estimator,"very_small")
-    print(very_small)
-    very_small.train()
-    very_small.evaluate()
-    preds = very_small.predict()
+
+    small_150 = Session(dp, estimator,"small_150")
+    print(small_150)
+    small_150.train()
+    small_150.evaluate()
+    preds = small_150.predict()
     print(preds)
     print()
-    eval_500 = data_preparation.DataProvider(loader.data, 500, 500, 500)
-    eval_500_session = Session(eval_500, estimator)
-    print(eval_500_session)
-    eval_500_session.train()
-    eval_500_session.evaluate()
-    eval_500_session.predict()
-    print()
+    sessions.append(small_150)
+    dp = data_preparation.DataProvider(loader.data, 600, 200, 100)
+    small_600 = Session(dp, estimator)
+    print(small_600)
+    small_600.train()
+    small_600.evaluate()
+    small_600.predict()
+    sessions.append(small_600)
+    """print()
     predict_40 = data_preparation.DataProvider(loader.data, 20000, 5000, 500)
     predict_40_session = Session( predict_40, estimator)
     print(predict_40_session)
@@ -201,6 +205,6 @@ def run_baseline():
     print(full_session)
     full_session.train()
     full_session.evaluate()
-    full_session.predict()
-    return(very_small,eval_500_session,predict_40_session,full_session)
+    full_session.predict()"""
+    return sessions
 
