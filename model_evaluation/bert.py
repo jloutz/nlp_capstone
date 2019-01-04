@@ -388,7 +388,7 @@ def run_bert_local():
 BERT_BASE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-12_H-768_A-12"
 BERT_LARGE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-24_H-1024_A-16"
 
-def run_bert_tpu(testrun=False,loop=1,full=False):
+def run_bert_tpu(datasets=None, testrun=False,loop=1):
     loader_conf = data_preparation.AmazonQADataLoaderConfig("/home/jloutz67/nlp_capstone")
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
@@ -400,12 +400,11 @@ def run_bert_tpu(testrun=False,loop=1,full=False):
     bert_sessions = []
     baseline_sessions = []
 
-    if testrun:
-        datasets = [("small-450",450,150,100)]
-    elif full:
-        datasets = [("lrg-30k",30000,10000,100)]
-    else:
-        datasets = [("lrg-3000",3000,1000,100),("med-900",900,300,100),("small-600",600,200,100),("small-450",450,150,100),("small-300",300,100,100),("small-150",150,50,100)]
+    if datasets is None:
+        if testrun:
+            datasets = [("small-450",450,150,100)]
+        else:
+            datasets = [("lrg-3000",3000,1000,100),("med-900",900,300,100),("small-600",600,200,100),("small-450",450,150,100),("small-300",300,100,100),("small-150",150,50,100)]
 
     for dataset in datasets:
         for i in range(loop):
