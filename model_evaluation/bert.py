@@ -393,7 +393,7 @@ def run_bert_tpu(testrun=False,loop=1):
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
     config = BertEstimatorConfig(
-        bert_pretrained_dir=BERT_BASE_MODEL,
+        bert_pretrained_dir=BERT_LARGE_MODEL,
         output_dir="gs://nlpcapstone_bucket/output/bert/",
         tpu_name=os.environ["TPU_NAME"]
     )
@@ -410,7 +410,7 @@ def run_bert_tpu(testrun=False,loop=1):
             ##bert
             bert_estimator=BertEstimator(config)
             dp = data_preparation.DataProvider(loader.data, dataset[1], dataset[2], dataset[3])
-            bert_session = BertSession(dp, bert_estimator,name=dataset[0])
+            bert_session = BertSession(dp, bert_estimator,name=dataset[0]+"BIGBERT")
             print(bert_session)
             print()
             bert_session.train()
