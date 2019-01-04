@@ -432,27 +432,6 @@ def run_bert_tpu(testrun=False,loop=1):
             baseline_sessions.append(baseline_session)
     return (bert_sessions,baseline_sessions)
 
-def persist_session(session, output_dir="gs://nlpcapstone_bucket/sessions/"):
-    import os
-    import pickle
-    tf.gfile.MakeDirs(output_dir)
-    output_path = os.path.join(output_dir, session.persist_name())
-    obj = {}
-    if session.data_provider.train_examples:
-        obj["train_examples"]=session.data_provider.train_examples
-    if session.data_provider.dev_examples:
-        obj["eval_examples"] = session.data_provider.dev_examples
-    if session.evaluation_results:
-        obj["evaluation_results"] = session.evaluation_results
-    if session.data_provider.test_examples:
-        obj["test_examples"] = session.data_provider.test_examples
-    if session.prediction_results is not None:
-        obj["prediction_results"] = session.prediction_results
-
-    with tf.gfile.GFile(output_path, "w") as f:
-        print("Dumping a big fat pickle to {}...".format(output_path))
-        pickle.dump(obj,f)
-        print("Done!")
 
 
 

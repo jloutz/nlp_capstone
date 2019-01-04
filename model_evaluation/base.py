@@ -1,8 +1,6 @@
 import uuid
-
 import numpy
 import time
-
 import pandas
 
 import data_preparation as data_preparation
@@ -131,11 +129,12 @@ class Session():
             for pred in self.prediction_results:
                 print("{:<30}{:100}".format(pred[0],pred[1]))
 
-
     def persist(self,output_dir):
         import os
         import pickle
-        os.makedirs(output_dir,exist_ok=True)
+        import tensorflow as tf
+        ## use tensorflow dir handling - good for google cloud
+        tf.gfile.MakeDirs(output_dir)
         output_path = os.path.join(output_dir,self.persist_name())
         obj = {}
         if self.data_provider.x_train:
@@ -152,11 +151,10 @@ class Session():
         if self.prediction_results is not None:
             obj["prediction_results"] = self.prediction_results
 
-        with open(output_path,'wb') as f:
+        with tf.gfile.GFile(output_path, "w") as f:
             print("Dumping a big fat pickle to {}...".format(output_path))
-            pickle.dump(obj,f)
+            pickle.dump(obj, f)
             print("Done!")
-
 
     def persist_name(self):
         persist_name = self.__str__()
@@ -205,65 +203,4 @@ def run_baseline():
     full_session.evaluate()
     full_session.predict()
     return(very_small,eval_500_session,predict_40_session,full_session)
-
-
-def run_baseline_with_providers(providers:[data_preparation.DataProvider]):
-    estimator = BaselineEstimator()
-    sessions = []
-    for provider in providers:
-        session = Session(provider, estimator, "rehydrated")
-        print(session)
-        session.train()
-        session.evaluate()
-        session.predict()
-        sessions.append(session)
-    return sessions
-
-def rehydrate_providers_from_bert_sessions():
-    import glob
-    import os
-    from sklearn.externals import joblib
-    bert_results = [(os.path.split(path)[1], joblib.load(path)) for path in glob.glob("C:/Projects/udacity-capstone/results/sessions/*Bert*")]
-    providers = []
-    for name,result in bert_results:
-        provider = data_preparation.DataProvider.provider_from_input_examples(
-            result["train_examples"],
-            result["eval_examples"],
-            result["test_examples"]
-        )
-        providers.append(provider)
-    return bert_results,providers
-
-def run_baseline_with_bert_session_data():
-    ### util function to do things exactly the opposite of the
-    ### way I intended... o well...
-    ### but seriously - I managed to get a handful of bert results persisted along with data.
-    ### but I neglected to run the baseline with the same data, and I DO NOT want to do it again and pay for more cloud tpu/gpu time right now..
-    #   In order to run baseline against the same data do
-    ###     load bert session results, extract input_examples, make providers from those examples, make sessions from
-    ###     those providers, and run baseline.
-    ###     then compare original bert session results with baseline session results...
-    bert_results,providers = rehydrate_providers_from_bert_sessions()
-    baseline_sessions = run_baseline_with_providers(providers)
-    # now compare bert results with baseline sessions
-    for i,bert_result in enumerate(bert_results):
-        bname = bert_result[0]
-        bres = bert_result[1]
-        baseline_session = baseline_sessions[i]
-        print("Bert name")
-        print(bname)
-        print("Bert eval result: ",bres["evaluation_results"]["eval_accuracy"])
-        print("Baseline name")
-        print(baseline_session)
-        print("Baseline results: ",baseline_session.evaluation_results[2])
-
-
-
-
-
-
-
-
-
-
 
