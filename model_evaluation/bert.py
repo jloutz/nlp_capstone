@@ -403,7 +403,7 @@ def run_bert_tpu(testrun=False,loop=1,full=False):
     if testrun:
         datasets = [("small-450",450,150,100)]
     elif full:
-        datasets = [("full",0.67,0.33,100)]
+        datasets = [("lrg-30k",30000,10000,100)]
     else:
         datasets = [("lrg-3000",3000,1000,100),("med-900",900,300,100),("small-600",600,200,100),("small-450",450,150,100),("small-300",300,100,100),("small-150",150,50,100)]
 
