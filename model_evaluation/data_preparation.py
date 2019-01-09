@@ -2,6 +2,7 @@ import os
 import gzip
 import random
 import uuid
+import numpy as np
 ## sklearn
 from sklearn.externals import joblib
 from sklearn.model_selection import train_test_split
@@ -258,7 +259,88 @@ def load_amazon_qa_data(local=True):
     print(provider)
     return provider
 
+######### data exploration ##########
+def loader():
+    conf = AmazonQADataLoaderConfig(LOCAL_PROJECT_DIR)
+    loader = AmazonQADataLoader(conf=conf)
+    loader.load()
+    return loader
 
 
-if __name__ == "__main__":
-    load_amazon_qa_data()
+def text_lengths(data):
+    ## get array of texts lengths
+    lengths = []
+    for texts in data:
+        lengths.extend([len(text.split()) for text in texts])
+    return lengths
+
+def text_len_hist(len_arr):
+    import matplotlib.pyplot as plt
+    plt.hist(len_arr,bins=1000)
+    plt.xlabel("text length (words)")
+    plt.show()
+    return plt
+
+def data_len_stats(len_arr,quantile=90):
+    from scipy import stats as st
+    stats = {}
+    nd_arr=np.array(len_arr)
+    stats['doc_count'] = len(len_arr)
+    stats['mean'] = nd_arr.mean()
+    stats['mode'] = st.mode(nd_arr)
+    stats['quantile_'+str(quantile)]=np.percentile(nd_arr,quantile)
+    stats['max']=nd_arr.max()
+    stats['min']=nd_arr.min()
+    stats['num_empty']=len(nd_arr[nd_arr==0])
+    return stats
+
+
+
+def trim_data_by_textlen(data,quantile=90):
+    ### data is data['X'] of a loader
+    ### trim empty texts and texts of len > quantile (percentile)
+    len_arr = np.array(text_lengths(data))
+    quantile_count = np.percentile(len_arr, quantile)
+    newdata = []
+    def _check_len(text,max_incl):
+        x = len(text.split())
+        return x > 0 and x <= max_incl
+    for texts in data:
+        newtexts = [text for text in texts if _check_len(text,quantile_count)]
+        newdata.append(newtexts)
+
+    return newdata
+
+
+def explore_data():
+    data = loader().data
+    len_arr = text_lengths(data['X'])
+    stats = data_len_stats(len_arr)
+    print("original data stats")
+    print(stats)
+    plt = text_len_hist(len_arr)
+    new_data = trim_data_by_textlen(data['X'])
+    new_lens = text_lengths(new_data)
+    print("trimmed data stats")
+    print(data_len_stats(new_lens))
+    plt2 = text_len_hist(new_lens)
+    return (plt,plt2)
+
+
+
+def _cat_dist(data):
+    import numpy as np
+    cat_counts = []
+    labels = data['y']
+    texts_l = data['X']
+    for texts in texts_l:
+        cat_counts.append(len(texts))
+    print(list(zip(labels,cat_counts)))
+    cat_percent = np.array(cat_counts)/np.sum(cat_counts) * 100
+    for x in cat_percent:
+        print("{0:.2f}".format(x))
+data = loader().data
+data['X'] = trim_data_by_textlen(data['X'])
+_cat_dist(data)
+
+
