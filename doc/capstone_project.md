@@ -47,7 +47,7 @@ A recent advancement in NLP has been the development of pretrained _language_ mo
 
 These models represent not only lexical features (as is the case with Bag-of-Words) but also lexical and contextual semantics as well. Because of this, the potential impact of these language models for NLP is being compared to the impact pretrained image-recognition models have had for the field of computer vision ([NLPs Imagenet Moment has Arrived](https://thegradient.pub/nlp-imagenet/))
 
-The promise of pretrained language models is that they make it possible to fine-tune pretrained models with relatively small training sets, creating classifiers that might generalize well by leveraging lexical semantics and context they learned through pre-training on huge datasets.  
+The promise of pretrained language models is that they make it possible to fine-tune pretrained models with relatively small training sets, creating classifiers that might generalize well by leveraging features and context they learned through pre-training on huge datasets.  
 
 ### Problem Statement
 
@@ -68,8 +68,8 @@ In order to answer these questions, an evaluation is proposed where two modern p
 * Using a supervised learning paradigm, train 3 text classifiers using training data in the dataset. The 3 classifiers are based on the following implementations:
 
   * tfidf word-bigrams fed into a Naive Bayes Classifier. This implementation is based on scikit-learn, and represents a widely-used and strong baseline implementation for comparison
-  * BERT (TODO)
-  * ULMFiT (TODO)
+  * BERT - implementation based on the open-source release available at https://github.com/google-research/bert
+  * ULMFiT - implementation based on the open source release found at https://github.com/fastai/fastai
 
 * Each classifier is trained (or fine-tuned) on samples out of the total dataset of various sizes. The focus is on small samples, to simulate the situation of bootstrapping a chatbot from scratch, and to test the hypothesis that pretrained language models might indeed require less training (fine-tuning) than other classifiers to achieve similar or better results.   
 
@@ -97,8 +97,6 @@ As this is a multiclass classification problem, a [confusion matrix](https://en.
 
 
 ## II. Analysis
-_(approx. 2-4 pages)_
-
 ### Data Exploration
 
 For this evaluation I used the [amazon question/answer dataset][]. ([Wan and McAuley 2016][]), ([McAuley and Yan 2016][]) This dataset contains around 1.4 million relatively short question/answer pairs taken from amazon product reviews. This dataset is an excellent dataset for this evaluation, because:
@@ -134,7 +132,7 @@ The category names, the amount of texts per category, and the relative size of t
 | software                   | 21272 | 4.68    |
 | video_games                | 26614 | 5.86    |
 
- As we can see, the sizes of each category range from about ~4% to about 19% of the total dataset size. This unbalanced category distribution had to be corrected in order to produce balanced classes. This step is particularly important, as the accuracy metric will be used to evaluate classifier performance. 
+ As we can see, the sizes of each category range from about ~4% to about 19% of the total dataset size. This unbalanced category distribution will be corrected in order to produce balanced classes. This step is particularly important, as the accuracy metric will be used to evaluate classifier performance. 
 
 ### Exploratory Visualization
 
@@ -179,11 +177,65 @@ The new distribution of text categories after discarding long and empty texts is
 | software                   | 18441 | 4.50    |
 | video_games                | 24659 | 6.02    |
 
-The distribution did not change significantly compared to the dataset before trimming.
-
-
+The distribution did not change significantly compared to the dataset before trimming, so balancing the dataset is still a requirement. 
 
 ### Algorithms and Techniques
+
+##### Transfer Learning
+
+Transfer Learning is a technique for improving the performance of task-specific machine learning models by incorporating existing models pretrained on very large, general datasets into those task-specific models. During so-called *fine-tuning*, task-specific data pertaining to the specific problem to be solved is used to further train an existing model, adjusting or fine-tuning the model to better fit the task at hand. 
+
+ Transfer learning has been used extensively in recent years in the field of computer vision and image classification ([Donahue et al. 2013]()). In this application, deep neural convolutional networks are trained on a large dataset, such as the popular [imagenet](http://www.image-net.org/). Through training, the layers in these networks come to represent a hierarchy of low-level (lines, edges) to higher-level (shapes, object contours, scenes) features of the images. The intuition of transfer learning is that these layers of learned feature representations can be re-used for a wide variety of novel tasks where the amount of training data might be insufficient for training a deep model from scratch.    
+
+##### Language Models
+
+Transfer learning in NLP (Natural Language Processing) works by the same principle as transfer learning in Computer Vision , but applied to language tasks instead of image-related tasks. First, a *language model* is trained on a large dataset of text which thereby learns representations of the features of the language/dataset which can then be re-used for specific, novel NLP tasks. The models evaluated here (BERT, ULMFiT) are examples of such pretrained models. 
+
+A *language model* in the most exact sense refers to a model trained on the prediction task of *predicting the next word in a sequence of words*. This task is difficult because accurate prediction of the next word in a sequence must involve some representation of syntactic, semantic, and real-world knowledge as is demonstrated by the following sentences:
+
+*Have you ever really fallen in ___*
+
+*Have you ever fallen down the ___*
+
+A distinguishing feature of the language models evaluated here as opposed to word embeddings such as [word2vec](Mikolov et. al 2013), [GloVe](Pennington et. al), or [Fasttext](Joulin et al. 2016), is that these models learn *context-sensitive representations* of words, whereas word embeddings will learn one embedding for each word in the training vocabulary. In contrast to word embeddings, these models can be used for all but the output layer in transfer learning, whereas word embeddings can only provide the first layer of a task-specific network in transfer learning.  
+
+Learning context-sensitive representations presumably entails that these models are learning and representing abstract and higher-level features of language. The exact nature of these higher-level features must remain speculative, as they are represented in the weights of very large neural networks and as such, not transparently interpretable, however there is evidence that language models trained on word prediction tasks learn useful abstraction of language such as long-distance dependencies ([]()), hierarchical relations [](), and sentiment [](). TODO
+
+The abstractions learned by these models are useful because they generalize well. Such models can be applied to a wide variety of language related tasks such as question-answering, entailment and sentiment analysis, grammaticality judgments and more, as evidenced by competitive performance of these models on difficult benchmarks such as [GLUE](). 
+
+Language modeling of this type has the additional advantage of being an *unsupervised learning task*. This is fundamentally important, as in NLP, the amount of unlabeled training data is practically unlimited (raw text), whereas labeled training data for a specific task is usually hard to come by and involves significant human effort to collect and annotate. The ability to use freely available and abundant text for pretraining is key in the usefulness of pretrained language models 
+
+##### ULMFiT
+
+ULMFiT itself is less of a language model implementation as a general framework for transfer learning and fine-tuning language models. Indeed, the suggestion that word-prediction-from-context language models are the right task to train for NLP transfer learning is a proposal of the ULMFiT framework. The reference implementation uses the  [AWD LSTM language model](Merity et al. 2017) under the hood which has the following properties:
+
+* implements innovations in regularization and hyperparameter tuning, but otherwise
+* is a "Vanilla" LSTM with no custom modifications to the LSTM architecture
+* It is a 3-layer architecture with 1150 units in the hidden layer and an embedding size of 400
+
+ULMFiT claims to be a general framework in that no task-specific alterations to the base architecture is needed. The same language model and hyperparameter tune can be used for transfer learning in a wide variety of tasks.  
+
+ULMFiT proposes a 3-Step process for fine-tuning
+
+1. LM pretraining 
+
+   The model is pretrained on a large corpus. The reference implementation is pretrained on the [Wikitext 103 dataset](Merity et al. 2017b)
+
+2. LM finetuning
+
+   During LM finetuning, the weights of all 3 layers of the network are updated using task-specific training data
+
+3. (for classification) Classification fine-tuning
+
+ULMFiT proposes a handful of innovations for fine-tuning:
+
+   
+
+##### BERT
+
+BERT differs from other language model implementations by incorporating bi-directional context. An example is.. 
+
+
 
 ### Benchmark
 
@@ -230,3 +282,23 @@ _(approx. 1-2 pages)_
 ### Free-Form Visualization
 ### Reflection
 ### Improvement
+
+### References
+
+[Giorgino 2004]: https://pdfs.semanticscholar.org/99e1/3b7ac59b3b82956b26fb5fb964b2c69f4338.pdf	"An Introduction to Text Classification"
+[Wang and Manning 2012]: https://www.aclweb.org/anthology/P12-2018	" "Baselines and Bigrams: Simple, Good Sentiment and Topic Classification""
+[ULMFiT]: https://arxiv.org/abs/1801.06146
+[Elmo]: https://allennlp.org/elmo
+[BERT]: https://github.com/google-research/bert
+[NLPs-Imagenet-Moment]: https://thegradient.pub/nlp-imagenet/	"NLPs ImageNet Moment has Arrived"
+[amazon question/answer Dataset]: http://jmcauley.ucsd.edu/data/amazon/qa/
+[Wan and McAuley 2016]: http://cseweb.ucsd.edu/~jmcauley/pdfs/icdm16c.pdf	"Modeling ambiguity, subjectivity, and diverging viewpoints in opinion question answering systems"
+[McAuley and Yang 2016]: http://cseweb.ucsd.edu/~jmcauley/pdfs/www16b.pdf	"Addressing complex and subjective product-related queries with customer reviews"
+[Donahue et. al. 2013]: https://arxiv.org/abs/1310.1531	"DeCAF: A Deep Convolutional Activation Feature for Generic Visual Recognition"
+[Mikolov et. al. 2013]: https://arxiv.org/abs/1301.3781 " Efficient Estimation of Word Representations in Vector Space"
+[Pennington et. al]: https://nlp.stanford.edu/pubs/glove.pdf	"GloVe: Global Vectors for Word Representation"
+[Joulin et al. 2016]: https://arxiv.org/pdf/1607.01759.pdf   "Bag of Tricks for Efficient Text Classification"
+[GLUE]: https://gluebenchmark.com/tasks
+[Merity et al. 2017]: https://arxiv.org/abs/1708.02182 "Regularizing and Optimizing LSTM Language Models "
+[Merity et al. 2017b]: https://www.salesforce.com/products/einstein/ai-research/the-wikitext-dependency-language-modeling-dataset/
+
