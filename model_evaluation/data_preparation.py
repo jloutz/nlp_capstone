@@ -8,8 +8,7 @@ from sklearn.externals import joblib
 from sklearn.model_selection import train_test_split
 # bert-master
 import tokenization
-from run_classifier import InputExample, PaddingInputExample
-
+from run_classifier import InputExample
 
 class DataLoader():
     """

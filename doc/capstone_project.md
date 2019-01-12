@@ -67,7 +67,7 @@ In order to answer these questions, an evaluation is proposed where two modern p
 
 * Using a supervised learning paradigm, train 3 text classifiers using training data in the dataset. The 3 classifiers are based on the following implementations:
 
-  * tfidf word-bigrams fed into a Naive Bayes Classifier. This implementation is based on scikit-learn, and represents a widely-used and strong baseline implementation for comparison
+  * tfidf weighted word-grams fed into a Naive Bayes Classifier. This implementation is based on scikit-learn, and represents a widely-used and strong baseline implementation for comparison
   * BERT - implementation based on the open-source release available at https://github.com/google-research/bert
   * ULMFiT - implementation based on the open source release found at https://github.com/fastai/fastai
 
@@ -197,7 +197,7 @@ A *language model* in the most exact sense refers to a model trained on the pred
 
 *Have you ever fallen down the ___*
 
-A distinguishing feature of the language models evaluated here as opposed to word embeddings such as [word2vec](Mikolov et. al 2013), [GloVe](Pennington et. al), or [Fasttext](Joulin et al. 2016), is that these models learn *context-sensitive representations* of words, whereas word embeddings will learn one embedding for each word in the training vocabulary. In contrast to word embeddings, these models can be used for all but the output layer in transfer learning, whereas word embeddings can only provide the first layer of a task-specific network in transfer learning.  
+A distinguishing feature of the language models evaluated here as opposed to word embeddings such as [word2vec](Mikolov et. al 2013), [GloVe](Pennington et. al), or [Fasttext](Joulin et al. 2016), is that these models learn *context-sensitive representations* of words, whereas word embeddings will learn one embedding for each word in the training vocabulary. In contrast to word embeddings, these models can be used for all but the output layer in transfer learning, whereas word embeddings can only provide the first layer of a task-specific network in transfer learning.   
 
 Learning context-sensitive representations presumably entails that these models are learning and representing abstract and higher-level features of language. The exact nature of these higher-level features must remain speculative, as they are represented in the weights of very large neural networks and as such, not transparently interpretable, however there is evidence that language models trained on word prediction tasks learn useful abstraction of language such as long-distance dependencies ([]()), hierarchical relations [](), and sentiment [](). TODO
 
@@ -209,61 +209,171 @@ Language modeling of this type has the additional advantage of being an *unsuper
 
 ULMFiT itself is less of a language model implementation as a general framework for transfer learning and fine-tuning language models. Indeed, the suggestion that word-prediction-from-context language models are the right task to train for NLP transfer learning is a proposal of the ULMFiT framework. The reference implementation uses the  [AWD LSTM language model](Merity et al. 2017) under the hood which has the following properties:
 
-* implements innovations in regularization and hyperparameter tuning, but otherwise
-* is a "Vanilla" LSTM with no custom modifications to the LSTM architecture
+* implements innovations in regularization and hyperparameter tuning, but otherwise:
+* is a "Vanilla" LSTM with no custom modifications to the LSTM architecture such as attention or short-cut connections
 * It is a 3-layer architecture with 1150 units in the hidden layer and an embedding size of 400
 
-ULMFiT claims to be a general framework in that no task-specific alterations to the base architecture is needed. The same language model and hyperparameter tune can be used for transfer learning in a wide variety of tasks.  
+ULMFiT claims to be a general framework in that the same language model and hyperparameter tune can be used for transfer learning in a wide variety of tasks.  
 
-ULMFiT proposes a 3-Step process for fine-tuning
+ULMFiT proposes a 3-Step process for training and fine-tuning
 
-1. LM pretraining 
+1. **LM pretraining** 
 
    The model is pretrained on a large corpus. The reference implementation is pretrained on the [Wikitext 103 dataset](Merity et al. 2017b)
 
-2. LM finetuning
+2. **LM fine-tuning**
 
-   During LM finetuning, the weights of all 3 layers of the network are updated using task-specific training data
+   During LM fine-tuning, the weights of all layers of the network are updated using task-specific training data. LM fine-tuning uses Discriminative fine-tuning and Slanted triangular learning rates (see below)
 
-3. (for classification) Classification fine-tuning
+3. **Classification fine-tuning** (for classification) - for classification fine-tuning, an intermediate layer is added to the model with ReLU activation, and the classifier output layer is added with softmax activation outputting the probability distribution of predictions for each class in the target variable. 
 
-ULMFiT proposes a handful of innovations for fine-tuning:
+ULMFiT proposes 3 innovations for fine-tuning:
 
-   
+1. **Discriminative fine-tuning** assigns a *unique, dedicated learning rate parameter to each individual layer in the model*. The reasoning is that because each layer encodes different information, they should be fined tuned differently or *discriminatively*. In contrast to normal Gradient Decent, where all model parameters at a time-step are updated at once, 
+   $$
+   \theta_t = \theta_{t-1}-\mu \nabla_{\theta_t} J(\theta)
+   $$
+   where  $\theta=parameters,$ $ \mu=learning rate$ and $ \nabla=gradient$
+
+   discriminative fine-tuning splits the model parameters into one set per layer, and updates them according to their own learning rate as follows:
+   $$
+   \theta_t^l = \theta_{t-1}^l-\mu^l \nabla_{\theta_t} J(\theta)
+   $$
+   where *l* refers to each layer. 
+
+2. **Slanted Triangular learning rates** - the authors want the learning at each layer to converge quickly to the approximate correct region in feature space, and then iteratively refine the parameters. To accomplish this, they propose a slanted triangular learning rate which increases rapidly, and then declines slowly.
+
+    ![1547309151408](C:\Users\loutzenj\AppData\Roaming\Typora\typora-user-images\1547309151408.png) (taken from [Howard and Ruder 2018](), page 4)
+
+3. **Gradual Unfreezing**   is a technique applied at the classification fine-tuning step. Rather than "unfreeze" or unlock all layers in the model at once during fine-tuning, making them all available for updating, the authors propose unfreezing the top layer, fine-tuning for one epoch, and then unfreezing the next layer, and repeating the process until convergence. Gradual unfreezing is claimed to help the model resist "catastrophic forgetting" - that is, forgetting much of what it has learned in steps 1 and 2 and making transfer learning pointless. The rational for starting at the top layer is that this layer contains the least general information, or in other words the information containing features which are nearest to the final classification step. 
+
+These techniques are claimed to help ULMFiT generalize well to a broad range of specific tasks, while at the same time preserving as much pretrained knowledge as possible.   
+
+
 
 ##### BERT
 
-BERT differs from other language model implementations by incorporating bi-directional context. An example is.. 
+BERT (Bidirectional Encoder Representations from Transformers) differs from other language model implementations by incorporating **bi-directional context**. The idea is intuitive: train a language model which can predict a word from context, but use context from both directions, both before and after the word:
 
+*{She went to the} ____ {and bought groceries}*
 
+While ULMFiT and other pretrained LMs can be trained forwards (predicting next word) and backwards (predicting previous word) independently and either concatenate forward and backward context features ([Peters et al 2018](Elmo) ) or average LM classifier results (ULMFiT), BERT is unique in that it learns bi-directional contextual representations at once. 
+
+The technique used for bi-directional learning is called the **"masked language model"** or MLM. This technique is inspired by the [Cloze Test](https://en.wikipedia.org/wiki/Cloze_test) where a paragraph is presented with a proportion of words replaced by a blank, and subjects have to try to guess the missing words. In the MLM, a small percentage of words are hidden or "masked out" during training (as in the example sentence above) and the prediction task is to predict the masked tokens. The learned hidden vectors representing the masked tokens are feed to a softmax output layer to predict the output token (in the space of all tokens in the training set vocabulary). In the reference implementation, 15% of input tokens were masked out. 
+
+BERT is based on a multi-layer bidirectional transformer encoder architecture ([Vaswani et al 2017]()) . The details of the underlying implementation can be taken from that paper, important here is to note that it is a fundamentally different architecture than ULMFiT. The Transformer contains no recurrence (as in LSTM) nor convolutions (as in CNNs), but uses rather a unique encoder-decoder with stacked attention architecture.
 
 ### Benchmark
 
-## III. Methodology
-_(approx. 3-5 pages)_
+There is no established benchmark for classifiers using this dataset that I am aware of, however to provide a baseline for the performance of the language models on this data, a baseline Bag-of-Words classifier is used. This baseline tokenizes input text creating normalized word-unigrams and bigrams which are then weighted with tf-idf. The tf-idf feature vectors are  used as input to a Multinomial naive Bayes classifier. This simple baseline represents a strong benchmark for short text classification, as already mentioned above and discussed in [Wang and Manning 2012](). 
 
+## III. Methodology
 ### Data Preprocessing
 
-After preprocessing, the example above is reduced to two short texts in an array of texts corresponding to the "baby" category. Much of the meta-data in the original format will be discarded during preprocessing, as I am only interested in the the labels and texts.
+The training data was downloaded from the amazon question/answer dataset site. The downloaded files were tarballs (*.tar.gz), one tarball per category. The extracted data consists of one *.json file for each category. These files consist of question-answer data and metadata, one line for each question/answer pair. 
 
 ```
-{'labels': ['baby', 'beauty'.....,
+{'questionType': 'open-ended',
+'asin': '177036417X',
+'answerTime': 'Apr 16, 2015',
+'unixTime': 1429167600,
+'question': "Does this book contain any vaccination/immunization pages? Or pages about school? (Most do, yet I don't vax and I homeschool). Thx so much! :)",
+'answer': 'Immunization page, yes. School, no.'}
+```
+
+The first real step of preprocessing is to extract the question and answers from these text lines, discarding the other metadata. For each question/answer pair in each category, the pair is extracted and appended to an array of texts. This array represents all texts in a category, for example "baby". Additionally, an array of category names is built. 
+
+```
+{'labels': ['baby', '.....,
 'texts': [['"Does this book contain any vaccination/immunization pages? Or pages about school? (Most do, yet I don't vax and I homeschool). Thx so much! :)","Immunization page, yes. School, no.", .....],[....]] 
 ```
 
-As the focus of this evaluation is on fine-tuning pretrained models with small datasets, small samples will be taken from the total dataset to create the train and test datasets.  
+The class `AmazonQADataLoader` takes over the above tasks of tarball extraction, sentence pair extraction, and label and text array construction. The method for extracting texts and building label array is:
 
-These samples will be taken in such a way that the data is ***balanced across the 10 classes***. Balanced classes have the effect of giving the classifiers no a-priori reason for preferring one class over the other. As there is much more data available in the dataset than needed for training/fine-tuning, creating balanced sample datasets will be easy. 
+```python
+    def _extract_text_and_labels(self,lazy=True):
+        ## parse data in json files preserving only labels (category name) and texts
+        ## both questions and answers found in json are 
+        ## treated as example texts for   each category
+        if not lazy or not os.path.exists(self.json_dir) 
+        or len(os.listdir(self.json_dir))==0:
+            self._unpack()
+        import ast
+        import re
+        labels = []
+        texts = []
+        print("Extracting...")
+        for category_file_name in os.listdir(self.json_dir):
+            print("Loading text from: ", category_file_name)
+            label = re.split("qa_(.*)\\.json", category_file_name)[1].lower()
+            labels.append(label)
+            category_texts = []
+            with open(os.path.join(self.json_dir,category_file_name), "rt") as f:
+                for line in f.readlines():
+                    obj = ast.literal_eval(line)
+                    category_texts.append(obj['question'])
+                    category_texts.append(obj['answer'])
+            texts.append(category_texts)
+        print("Done!")
+        return labels, texts
+    ...
+self.data = {"y": labels, "X": texts}   ## data loader "data" attribute 
 
-In order to understand the relative effect of increasing the training data size on the target model as well as benchmark models, increasingly larger sample datasets will be added into the mix as well. 
+```
 
-_"very small data"_  < 500 training examples, ~10 classes. This amount simulates the situation of bootstrapping a chatbot in which you have dreamed up a dozen or so intents and a handful of examples each.   
+The extracted text is saved in the data loader "data" attribute. This data is then used to initialize instances of *`DataProvider`* class as needed. The `DataProvider` works on the underlying total extracted dataset, and does the following:
 
-_"small data"_  < 5000 training examples ~ 10 classes.
+- **provides samples** of the data corresponding to the size of the passed-in train, eval, and test size parameters. This is important as this evaluation is carried out on samples of various sizes of the underlying dataset. As the focus of this evaluation is on fine-tuning pretrained models with small datasets, small samples were taken from the total dataset to create the train and test datasets.  The sample sizes used for the evaluation were:
 
-_"not so small data"_ < 50000 ~ 10 classes.  
+| Sample name | training set size | evaluation set size | test set size |
+| ----------- | ----------------- | ------------------- | ------------- |
+| small-150   | 150               | 50                  | 100           |
+| small-300   | 300               | 100                 | 100           |
+| small-450   | 450               | 150                 | 100           |
+| small-600   | 600               | 200                 | 100           |
+| med-900     | 900               | 300                 | 100           |
+| med-1500    | 1500              | 500                 | 100           |
+| lrg-3000    | 3000              | 1000                | 100           |
+| lrg-30k     | 30000             | 10000               | 100           |
+| full        | ~150k             | ~50k                | 100           |
 
-_test or hold-out data_ - a rather large proportion will be used for test, Even up to 50% is appropriate. The large relative proportion of test as well as the low absolute numbers of data instances (especially in very small data) will emphasize the challenge of this evaluation - using transfer learning to generalize well to unseen instances - as in the case of small data, it is more probable that there will be examples in the test set with lexical features not seen in instances in the training set. 
+
+
+- ensures that the **provided samples are balanced** across the target classes. Balanced classes are important so as to not skew the accuracy score of the classifier.  Balanced classes have the effect of giving the classifiers no a-priori reason for preferring one class over the other. As there is much more data available in the dataset than needed for training/fine-tuning, creating balanced sample datasets is relatively easy. 
+
+  ```python
+      def _sample_from_data(self,data:dict,balance_classes = True):
+          if self.train_size <= 0 and self.eval_size <= 0 and self.test_size <= 0:
+              raise Exception("Please select size of train,\
+                              eval, or test sets (at least one of them)")
+          ## take train and eval samples from data
+          X_ = data["X"]
+          y_ = data["y"]
+          ## prepare for train test split
+          X = []
+          y = []
+  
+          ## if balance classes, downsample to smallest class size
+          downsampleto = min([len(x) for x in X_])
+  
+          for (i,label) in enumerate(y_):
+              vals = X_[i]
+              class_sample_size = downsampleto if balance_classes else len(vals)
+              y.extend([label for i in range(class_sample_size)])
+              X.extend(vals[:class_sample_size])
+  
+          if len(X) < self.train_size + self.eval_size:
+              raise Exception("not enough data...")
+          self.labels = list(set(y))
+          
+          ....
+  
+          ## train test split with stratify true if balance classes
+          dostrat = y if balance_classes else None
+          self.x_train, self.x_eval, self.y_train, self.y_eval = \        train_test_split(X,y,train_size=train_size,test_size=eval_size,stratify=dostrat)
+  ```
+
+- **Exposes the samples** in a format appropriate for the different classifiers in the evaluation. For example, BERT requires a list of Instances of "TrainingExample" objects, whereas the scikit-learn based baseline classifier requires two arrays, one "X" array of training texts, and a "y" array of the corresponding labels. 
 
 
 
@@ -289,7 +399,10 @@ _(approx. 1-2 pages)_
 [Wang and Manning 2012]: https://www.aclweb.org/anthology/P12-2018	" "Baselines and Bigrams: Simple, Good Sentiment and Topic Classification""
 [ULMFiT]: https://arxiv.org/abs/1801.06146
 [Elmo]: https://allennlp.org/elmo
+[Peters et al. 2018]: https://arxiv.org/abs/1802.05365	"Deep contextualized word representations"
 [BERT]: https://github.com/google-research/bert
+[Howard and Ruder 2018]: https://arxiv.org/pdf/1801.06146.pdf "Universal Language Model Fine-tuning for Text Classification"
+[Devlin et al. 2018]: https://arxiv.org/pdf/1810.04805.pdf	"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding"
 [NLPs-Imagenet-Moment]: https://thegradient.pub/nlp-imagenet/	"NLPs ImageNet Moment has Arrived"
 [amazon question/answer Dataset]: http://jmcauley.ucsd.edu/data/amazon/qa/
 [Wan and McAuley 2016]: http://cseweb.ucsd.edu/~jmcauley/pdfs/icdm16c.pdf	"Modeling ambiguity, subjectivity, and diverging viewpoints in opinion question answering systems"
@@ -301,4 +414,4 @@ _(approx. 1-2 pages)_
 [GLUE]: https://gluebenchmark.com/tasks
 [Merity et al. 2017]: https://arxiv.org/abs/1708.02182 "Regularizing and Optimizing LSTM Language Models "
 [Merity et al. 2017b]: https://www.salesforce.com/products/einstein/ai-research/the-wikitext-dependency-language-modeling-dataset/
-
+[Vaswani et al.]: https://arxiv.org/abs/1706.03762 "Attention is all you need"
