@@ -14,7 +14,7 @@ LOCAL_SESSIONS_DIR = "C:/Projects/udacity-capstone/results/sessions"
 GCP_SESSIONS_DIR = "gs://nlpcapstone_bucket/sessions"
 
 LOCAL_DATASETS_DIR = "C:/Projects/udacity-capstone/data/suites"
-GCP_DATASETS_DIR = "gs://nlpcapstone_bucket/data/suites"
+GCP_DATASETS_DIR = "gs://nlpcapstone_bucket/suites"
 
 
 class Results:
@@ -108,8 +108,8 @@ def load_datasets_for_evaluation(dir=LOCAL_DATASETS_DIR,name="datasets_for_eval.
     print("Done!")
     return datasets
 
-def run_evaluation_baseline(dir=LOCAL_DATASETS_DIR,suffix="_1"):
-    datasets = load_datasets_for_evaluation(dir=dir)
+def run_evaluation_baseline(datasets_dir=LOCAL_DATASETS_DIR,output_dir = LOCAL_SESSIONS_DIR, suffix="_1"):
+    datasets = load_datasets_for_evaluation(dir=datasets_dir)
     for key,dataset in datasets.items():
         print(key)
         estimator = base.BaselineEstimator()
@@ -118,10 +118,10 @@ def run_evaluation_baseline(dir=LOCAL_DATASETS_DIR,suffix="_1"):
         session.evaluate()
         print(session.evaluation_results[2])
         session.predict()
-        session.persist(output_dir=dir)
+        session.persist(output_dir=output_dir)
 
-def run_evaluation_ulmfit(dir=GCP_SESSIONS_DIR,suffix="_1"):
-    datasets = load_datasets_for_evaluation(dir=dir)
+def run_evaluation_ulmfit(datasets_dir=GCP_DATASETS_DIR,output_dir = GCP_SESSIONS_DIR, suffix="_1"):
+    datasets = load_datasets_for_evaluation(dir=datasets_dir)
     for key,dataset in datasets.items():
         print(key)
         estimator = ulmfit.ULMFiTEstimator()
@@ -130,7 +130,7 @@ def run_evaluation_ulmfit(dir=GCP_SESSIONS_DIR,suffix="_1"):
         session.evaluate()
         #print(session.evaluation_results[2])
         session.predict()
-        session.persist(output_dir=dir)
+        session.persist(output_dir=output_dir)
 
 
 
