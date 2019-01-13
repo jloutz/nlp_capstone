@@ -2,13 +2,7 @@ import glob
 import re
 from sklearn.externals import joblib
 import pandas as pd
-import tensorflow as tf
-
-import ulmfit
-from data_preparation import DataProvider
-import pickle
 import os
-import base
 
 LOCAL_SESSIONS_DIR = "C:/Projects/udacity-capstone/results/sessions"
 GCP_SESSIONS_DIR = "gs://nlpcapstone_bucket/sessions"
@@ -22,7 +16,7 @@ class Results:
         self.session_names = ("small-150", "small-300", "small-450", "small-600", "med-900",
                               "med-1500", "lrg-3000", "lrg-12k", "lrg-30k", "full",)
         self.sessions = self._load_sessions()
-        self.res_df:pd.DataFrame = self._results_df()
+        self.res_df = self._results_df()
 
     def _load_sessions(self):
         sessions = []
@@ -101,36 +95,13 @@ class Results:
 
 def load_datasets_for_evaluation(dir=LOCAL_DATASETS_DIR,name="datasets_for_eval.pkl"):
     loadpath = os.path.join(dir,name)
-    #with tf.gfile.GFile(loadpath, "rb") as f:
     print("Loading {}...".format(loadpath))
         #datasets = pickle.load(f)
     datasets = joblib.load(loadpath)
     print("Done!")
     return datasets
 
-def run_evaluation_baseline(datasets_dir=LOCAL_DATASETS_DIR,output_dir = LOCAL_SESSIONS_DIR, suffix="_1"):
-    datasets = load_datasets_for_evaluation(dir=datasets_dir)
-    for key,dataset in datasets.items():
-        print(key)
-        estimator = base.BaselineEstimator()
-        session = base.Session(dataset,estimator,key+suffix)
-        session.train()
-        session.evaluate()
-        print(session.evaluation_results[2])
-        session.predict()
-        session.persist(output_dir=output_dir)
 
-def run_evaluation_ulmfit(datasets_dir=GCP_DATASETS_DIR,output_dir = GCP_SESSIONS_DIR, suffix="_1"):
-    datasets = load_datasets_for_evaluation(dir=datasets_dir)
-    for key,dataset in datasets.items():
-        print(key)
-        estimator = ulmfit.ULMFiTEstimator()
-        session = ulmfit.ULMFiTSession(dataset,estimator,key+suffix)
-        session.train()
-        session.evaluate()
-        #print(session.evaluation_results[2])
-        session.predict()
-        session.persist(output_dir=output_dir)
 
 
 

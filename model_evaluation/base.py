@@ -3,12 +3,15 @@ import numpy
 import time
 import pandas
 
-import data_preparation as data_preparation
+from data_preparation import DataProvider
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score
+
+import evaluation
+
 
 class Estimator:
     """
@@ -80,7 +83,7 @@ class Session():
     encapsulates a run through a processing pipeline with a sampled subset of data
     """
     def __init__(self,
-                 data_provider:data_preparation.DataProvider,
+                 data_provider:DataProvider,
                  estimator:Estimator,
                  name=""):
         self.data_provider = data_provider
@@ -168,41 +171,15 @@ class Session():
         return mystr
 
 
-def run_baseline():
-    sessions = []
-    loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
-    loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
-    loader.load()
-    dp = data_preparation.DataProvider(loader.data, 150, 50, 100)
-    estimator = BaselineEstimator()
-
-    small_150 = Session(dp, estimator,"small_150")
-    print(small_150)
-    small_150.train()
-    small_150.evaluate()
-    preds = small_150.predict()
-    print(preds)
-    print()
-    sessions.append(small_150)
-    dp = data_preparation.DataProvider(loader.data, 600, 200, 100)
-    small_600 = Session(dp, estimator)
-    print(small_600)
-    small_600.train()
-    small_600.evaluate()
-    small_600.predict()
-    sessions.append(small_600)
-    """print()
-    predict_40 = data_preparation.DataProvider(loader.data, 20000, 5000, 500)
-    predict_40_session = Session( predict_40, estimator)
-    print(predict_40_session)
-    predict_40_session.train()
-    predict_40_session.evaluate()
-    predict_40_session.predict()
-    full = data_preparation.DataProvider(loader.data, 0.7, 0.3, 500)
-    full_session = Session(full, estimator)
-    print(full_session)
-    full_session.train()
-    full_session.evaluate()
-    full_session.predict()"""
-    return sessions
+def run_evaluation_baseline(datasets_dir=evaluation.LOCAL_DATASETS_DIR,output_dir = evaluation.LOCAL_SESSIONS_DIR, suffix="_1"):
+    datasets = evaluation.load_datasets_for_evaluation(dir=datasets_dir)
+    for key,dataset in datasets.items():
+        print(key)
+        estimator = BaselineEstimator()
+        session = Session(dataset,estimator,key+suffix)
+        session.train()
+        session.evaluate()
+        print(session.evaluation_results[2])
+        session.predict()
+        session.persist(output_dir=output_dir)
 

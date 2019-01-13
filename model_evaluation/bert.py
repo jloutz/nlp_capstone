@@ -1,11 +1,10 @@
 import uuid
-
 import numpy
 import os
-
 import pandas
 
 import data_preparation as data_preparation
+import evaluation
 from base import Estimator, Session, BaselineEstimator
 
 import modeling
@@ -433,10 +432,26 @@ def run_bert_tpu(datasets=None, testrun=False,loop=1):
             baseline_sessions.append(baseline_session)
     return (bert_sessions,baseline_sessions)
 
+def run_evaluation_bert(datasets_dir=evaluation.GCP_DATASETS_DIR,output_dir = evaluation.GCP_SESSIONS_DIR, suffix="_1"):
+    datasets = evaluation.load_datasets_for_evaluation(dir=datasets_dir)
+    for key,dataset in datasets.items():
+        print("*********** START "+key+suffix)
+        config = BertEstimatorConfig(
+            bert_pretrained_dir=BERT_BASE_MODEL,
+            output_dir="gs://nlpcapstone_bucket/output/bert/",
+            tpu_name=os.environ["TPU_NAME"]
+        )
+        estimator = BertEstimator(config)
+        session = BertSession(dataset,estimator,key+suffix)
+        session.train()
+        session.evaluate()
+        print(session.evaluation_results)
+        session.predict()
+        session.persist(output_dir=output_dir)
+
+def run_evaluations():
+    for run in range(1,4):
+        print("**********START run "+str(run))
+        run_evaluation_bert(suffix="_"+str(run))
 
 
-
-if __name__=="__main__":
-    #setup_estimator_test()
-    #run_bert_local()
-    run_bert_tpu()

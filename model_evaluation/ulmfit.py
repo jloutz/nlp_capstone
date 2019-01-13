@@ -6,6 +6,7 @@ from fastai.text import TextLMDataBunch, TextClasDataBunch, \
 from fastai import train
 from fastai.basic_train import Learner
 import data_preparation as data_preparation
+import evaluation
 from base import Estimator, Session
 import pandas as pd
 import numpy as np
@@ -75,3 +76,15 @@ class ULMFiTSession(Session):
     def predict(self, X=None, y=None):
         print("start predict")
         self.prediction_results = self.estimator.predict()
+
+def run_evaluation_ulmfit(datasets_dir=evaluation.GCP_DATASETS_DIR,output_dir = evaluation.GCP_SESSIONS_DIR, suffix="_1"):
+    datasets = evaluation.load_datasets_for_evaluation(dir=datasets_dir)
+    for key,dataset in datasets.items():
+        print(key)
+        estimator = ULMFiTEstimator()
+        session = ULMFiTSession(dataset,estimator,key+suffix)
+        session.train()
+        session.evaluate()
+        #print(session.evaluation_results[2])
+        session.predict()
+        session.persist(output_dir=output_dir)
