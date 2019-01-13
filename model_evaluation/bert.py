@@ -205,7 +205,7 @@ class BertEstimator(Estimator):
             is_training=False,
             drop_remainder=eval_drop_remainder)
 
-        result = self.estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+        result = self.estimator.evaluate()
         return result
 
 
@@ -238,7 +238,7 @@ class BertEstimator(Estimator):
             is_training=False,
             drop_remainder=predict_drop_remainder)
 
-        result = self.estimator.predict(input_fn=predict_input_fn)
+        result = self.estimator.predict()
         fulldata = []
         for (i, prediction) in enumerate(result):
             if i >= num_actual_predict_examples:
@@ -290,7 +290,7 @@ class BertSession(Session):
         if X is None:
             print("evaluate called although no eval data exists in provider (was eval_size 0?)")
             return
-        self.evaluation_results = self.estimator.evaluate(X, y)
+        self.evaluation_results = self.estimator.evaluate()
 
     def predict(self, X=None, y=None):
         if X is None:
@@ -299,7 +299,7 @@ class BertSession(Session):
                 print("test called although no test data exists in provider (was test_size 0?)")
                 return
         y = self.data_provider.get_labels()
-        self.prediction_results = self.estimator.predict(X, y)
+        self.prediction_results = self.estimator.predict()
 
 
     def show(self):

@@ -281,7 +281,7 @@ The training data was downloaded from the amazon question/answer dataset site. T
 'answer': 'Immunization page, yes. School, no.'}
 ```
 
-The first real step of preprocessing is to extract the question and answers from these text lines, discarding the other metadata. For each question/answer pair in each category, the pair is extracted and appended to an array of texts. This array represents all texts in a category, for example "baby". Additionally, an array of category names is built. 
+The first real step of preprocessing is to extract the question and answers from these text lines, discarding the other metadata. For each question/answer pair in each category, the pair is extracted and appended to an array of texts. This array represents all texts in a category, for example "baby". Additionally, an array of category names (labels) is built. 
 
 ```
 {'labels': ['baby', '.....,
@@ -295,14 +295,9 @@ The class `AmazonQADataLoader` takes over the above tasks of tarball extraction,
         ## parse data in json files preserving only labels (category name) and texts
         ## both questions and answers found in json are 
         ## treated as example texts for   each category
-        if not lazy or not os.path.exists(self.json_dir) 
-        or len(os.listdir(self.json_dir))==0:
-            self._unpack()
-        import ast
-        import re
-        labels = []
-        texts = []
-        print("Extracting...")
+        
+        ....        
+        
         for category_file_name in os.listdir(self.json_dir):
             print("Loading text from: ", category_file_name)
             label = re.split("qa_(.*)\\.json", category_file_name)[1].lower()
@@ -323,6 +318,34 @@ self.data = {"y": labels, "X": texts}   ## data loader "data" attribute
 
 The extracted text is saved in the data loader "data" attribute. This data is then used to initialize instances of *`DataProvider`* class as needed. The `DataProvider` works on the underlying total extracted dataset, and does the following:
 
+* **normalizes text lengths** - as discussed above, long and empty texts are removed from data from which samples are later taken
+
+  ```python
+      def _normalize_lengths(self, data, quantile=90):
+          ### remove empty texts and texts of len > quantile (percentile)
+  
+          def lengths(dat):
+              ## get lengths
+              lengths = []
+              for texts in dat:
+                  lengths.extend([len(text.split()) for text in texts])
+              return lengths
+  
+          newdata = []
+  
+          def _check_len(text, max_incl):
+              x = len(text.split())
+              return x > 0 and x <= max_incl
+  
+          for texts in data:
+              newtexts = [text for text in texts if _check_len(text, quantile_count)]
+              newdata.append(newtexts)
+  
+          return newdata,orig_stats,new_stats
+  
+  ```
+
+
 - **provides samples** of the data corresponding to the size of the passed-in train, eval, and test size parameters. This is important as this evaluation is carried out on samples of various sizes of the underlying dataset. As the focus of this evaluation is on fine-tuning pretrained models with small datasets, small samples were taken from the total dataset to create the train and test datasets.  The sample sizes used for the evaluation were:
 
 | Sample name | training set size | evaluation set size | test set size |
@@ -334,6 +357,7 @@ The extracted text is saved in the data loader "data" attribute. This data is th
 | med-900     | 900               | 300                 | 100           |
 | med-1500    | 1500              | 500                 | 100           |
 | lrg-3000    | 3000              | 1000                | 100           |
+| lrg-12k     | 12000             | 4000                | 100           |
 | lrg-30k     | 30000             | 10000               | 100           |
 | full        | ~150k             | ~50k                | 100           |
 
@@ -343,16 +367,9 @@ The extracted text is saved in the data loader "data" attribute. This data is th
 
   ```python
       def _sample_from_data(self,data:dict,balance_classes = True):
-          if self.train_size <= 0 and self.eval_size <= 0 and self.test_size <= 0:
-              raise Exception("Please select size of train,\
-                              eval, or test sets (at least one of them)")
-          ## take train and eval samples from data
-          X_ = data["X"]
-          y_ = data["y"]
-          ## prepare for train test split
-          X = []
-          y = []
-  
+          
+  		... 
+          
           ## if balance classes, downsample to smallest class size
           downsampleto = min([len(x) for x in X_])
   
@@ -361,30 +378,168 @@ The extracted text is saved in the data loader "data" attribute. This data is th
               class_sample_size = downsampleto if balance_classes else len(vals)
               y.extend([label for i in range(class_sample_size)])
               X.extend(vals[:class_sample_size])
-  
-          if len(X) < self.train_size + self.eval_size:
-              raise Exception("not enough data...")
-          self.labels = list(set(y))
-          
+         
           ....
   
           ## train test split with stratify true if balance classes
           dostrat = y if balance_classes else None
-          self.x_train, self.x_eval, self.y_train, self.y_eval = \        train_test_split(X,y,train_size=train_size,test_size=eval_size,stratify=dostrat)
+          self.x_train, self.x_eval, self.y_train, self.y_eval = \        					train_test_split(X,y,train_size=train_size,                                                        test_size=eval_size,stratify=dostrat)
   ```
 
-- **Exposes the samples** in a format appropriate for the different classifiers in the evaluation. For example, BERT requires a list of Instances of "TrainingExample" objects, whereas the scikit-learn based baseline classifier requires two arrays, one "X" array of training texts, and a "y" array of the corresponding labels. 
-
-
+- **Exposes the samples** in a format appropriate for the different classifiers in the evaluation. For example, BERT requires a list of Instances of `TrainingExample` objects, whereas the scikit-learn based baseline classifier requires two arrays, one "X" array of training texts, and a "y" array of the corresponding labels. 
 
 ### Implementation
+A particular coding challenge for this evaluation was in analyzing and understanding the open source BERT code, and getting it to work with this dataset. Because of the complexity of this code, I decided to do some object oriented analysis and design as a method of understanding the code and incorporating it into this evaluation. 
+
+The BERT code used as a starting point for the BERT implementation here is available at: 
+
+https://github.com/google-research/bert
+
+The script `run_classifier.py`provides the boilerplate for implementing a custom classifier with BERT.  This code was cloned and added as a source dependency to the project.  
+
+The goal of the analysis and design was to produce a suite of classes, interfaces, and implementations that would provide the functionality of evaluating all three classifiers (baseline, ULMFiT, BERT) on the same set of dataset samples, and record the results. I wanted to do this in a way that provided a consistent API, was manageable and readable, and had a minimum of "spaghetti code". 
+
+A simplified UML of the primary classes and collaborators is as follows:
+
+![](C:\Projects\udacity-capstone\doc\oo.png) 
+
+As already covered above, the `DataLoader` and `DataProvider` handles loading, extraction, sampling, balancing and length normalization. 
+
+For the evaluation, one `DataProvider` was initialized for each sample size (see above). 
+
+```python
+## initialize data provider for dataset with 900 train, 300 eval, and 100 test samples
+dp = DataProvider(data, "med-900",900,300,100)
+```
+
+The `Estimator` class encapsulates the configuration and logic for training, evaluating, and testing for each of the classifiers being evaluated. The train, evaluate, and test methods take data prepared by the `DataProvider` as parameters, and return evaluation or prediction results as needed. 
+
+```python
+## create an estimator for bert 
+bert_estimator=BertEstimator(config)            
+```
+
+The `Session` class has a `DataProvider` and an `Estimator` as collaborators, and encapsulates the process of running an `Estimator` with a specific dataset sample prepared from the `DataProvider`, and then recording the results in its `evaluation_results` and `prediction_results` variables respectively. After a session is run, it can be persisted so that the data and the results can be retrieved for final evaluation.  
+
+```python
+bert_session = BertSession(dp, bert_estimator,name="bertsession")
+bert_session.run()
+## run runs train, evaluate, and predict. These can also be called separately
+#bert_session.train()
+#bert_session.evaluate()
+#bert_session.predict()
+print(bert_session.evaluation_results)
+print(bert_session.prediction_results)
+bert_session.persist()
+
+```
+
+
+
+##### A note on text preprocessing
+
+The text data provided by the `DataProvider` class are not yet fully preprocessed for the estimators. Much text preprocessing happens "under the hood" and is initiated by the calls to train, evaluate, predict respectively. 
+
+The baseline estimator uses the default tokenization and normalization provided by `scikit-learn` `TfIdfVectorizer` with the exception that unigrams and bigrams are used (`ngram_range(1,2)`). The relevant part of that configuration is reproduced here:
+
+```python
+  encoding='utf-8',
+  strip_accents=None, lowercase=True,
+  analyzer='word',
+  stop_words=None, token_pattern=r"(?u)\b\w\w+\b"  
+```
+
+The BERT estimator uses the BERT-internal `FullTokenizer`. This tokenizer converts to unicode and then to lower case, removes punctuation and normalizes whitespace, just as the baseline does. It also segments the input into "word-pieces" with the BERT `WordpieceTokenizer`This tokenizer is unique to BERT and creates tokens based on word segments. The documentation for this is provided here:
+
+```python
+  def tokenize(self, text):
+    """Tokenizes a piece of text into its word pieces.
+
+    This uses a greedy longest-match-first algorithm to perform tokenization
+    using the given vocabulary.
+
+    For example:
+      input = "unaffable"
+      output = ["un", "##aff", "##able"]
+
+    Args:
+      text: A single token or whitespace separated tokens. This should have
+        already been passed through `BasicTokenizer.
+
+    Returns:
+      A list of wordpiece tokens.
+    """
+
+```
+
+TODO ULMFiT
+
+##### Estimator Hyperparameters
+
+The baseline estimator uses an alpha value of 1 for `MultinomialNB`. 
+
+The hyperparameters for BERT are extensive. It was prohibitive to do an extensive parameter tune due to the time and expense of running BERT on cloud TPU machines, so the defaults recommended by the BERT team were used. The relevant hyperparameters used  are as shown below:
+
+```python
+class BertEstimatorConfig:
+
+    def __init__(self,
+                 bert_pretrained_dir,
+                 output_dir ,
+                 use_tpu = True,
+                 tpu_name = None
+                 ):
+        ... 
+        
+        self.do_lower_case = (bert_pretrained_dir.find("uncased")>-1)
+        "The maximum total input sequence length after WordPiece tokenization. "
+        "Sequences longer than this will be truncated, and sequences shorter "
+        "than this will be padded."
+        self.max_seq_length = 128
+        self.train_batch_size = 32
+        self.eval_batch_size = 8
+        self.predict_batch_size = 8
+        self.learning_rate = 5e-5
+        self.num_train_epochs = 3.0
+        "Proportion of training to perform linear learning rate warmup for. "
+        "E.g., 0.1 = 10% of training."
+        self.warmup_proportion = 0.1
+        "How often to save the model checkpoint."
+        self.save_checkpoints_steps = 1000
+        "How many steps to make in each estimator call."
+        self.iterations_per_loop = 1000
+        .... 
+```
+
+The BERT Base model was used for this evaluation
+
+```python
+BERT_BASE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-12_H-768_A-12"
+```
+
+The BERT Base model utilizes a Transformer architecture with 12-layers of size 768 each, 12 attention heads, and 110 million trainable parameters. It is pretrained on Wikipedia text.  
+
+TODO ULMFiT
+
+
+
 ### Refinement
 
-## IV. Results
-_(approx. 2-3 pages)_
+Initially, the evaluation was run with the BERT large model. 
 
-### Model Evaluation and Validation
-### Justification
+```python
+BERT_LARGE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-24_H-1024_A-16"
+```
+
+This model has a deeper architecture with 340 million trainable parameters as opposed to the base model's 110 million. 
+
+It was found that running the large model often resulted in inconsistent evaluation and training results. Specifically, often the predicted class returned would be the same for all examples, resulting in an accuracy score of 10%, or exactly the score of a naive classifier. After extensive debugging, I was convinced this error was not in my code, but coming from BERT somewhere. Switching to the base model fixed the problem. 
+
+## IV. Results
+
+### Model Evaluation 
+
+
 
 ## V. Conclusion
 _(approx. 1-2 pages)_

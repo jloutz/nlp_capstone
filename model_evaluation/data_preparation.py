@@ -130,20 +130,79 @@ class DataProvider:
         self.test_examples = None
         self.labels = None
         self.data = data
+        self.data_stats = None
         if data is not None:
             self._sample_from_data(self.data)
         self.id = uuid.uuid4().hex
 
 
-    def _sample_from_data(self,data:dict,balance_classes = True):
+    def _data_len_stats(self, len_arr, quantile=90):
+        from scipy import stats as st
+        stats = {}
+        nd_arr = np.array(len_arr)
+        stats['len_arr']=len_arr
+        stats['doc_count'] = len(len_arr)
+        stats['mean'] = nd_arr.mean()
+        stats['mode'] = st.mode(nd_arr)
+        stats['quantile_' + str(quantile)] = np.percentile(nd_arr, quantile)
+        stats['max'] = nd_arr.max()
+        stats['min'] = nd_arr.min()
+        stats['num_empty'] = len(nd_arr[nd_arr == 0])
+        return stats
+
+    def _normalize_lengths(self, data, quantile=90):
+        ### data is data['X'] of a loader
+        ### remove empty texts and texts of len > quantile (percentile)
+
+        def lengths(dat):
+            ## get lengths
+            lengths = []
+            for texts in dat:
+                lengths.extend([len(text.split()) for text in texts])
+            return lengths
+
+        ## calculate stats
+        len_arr = np.array(lengths(data))
+        quantile_count = np.percentile(len_arr, quantile)
+        orig_stats = self._data_len_stats(len_arr,quantile)
+        newdata = []
+
+        def _check_len(text, max_incl):
+            x = len(text.split())
+            return x > 0 and x <= max_incl
+
+        for texts in data:
+            newtexts = [text for text in texts if _check_len(text, quantile_count)]
+            newdata.append(newtexts)
+
+        ## calculate stats
+        new_len_arr = np.array(lengths(newdata))
+        new_stats = self._data_len_stats(new_len_arr, quantile)
+
+        return newdata,orig_stats,new_stats
+
+    def _sample_from_data(self,data:dict,balance_classes = True, normalize_lengths=True):
+        ## works on full data resulting from data loader. Takes samples based on sample sizes
+        ## normalizes text lengths, balances classes, and creates lists of data samples and labels
         if self.train_size <= 0 and self.eval_size <= 0 and self.test_size <= 0:
             raise Exception("Please select size of train, eval, or test sets (at least one of them)")
-        ## take train and eval samples from data
+
+        ## X is list of list of samples,
+        ## y is list of category labels
         X_ = data["X"]
         y_ = data["y"]
-        ## prepare for train test split
+        ## new arrays for storing processed, normalized data
         X = []
         y = []
+
+        if normalize_lengths:
+            res = self._normalize_lengths(X_)
+            X_ = res[0]
+            self.data_stats =(res[1],res[2])
+            print("Before normalize length:")
+            print(self.data_stats[0])
+            print("After normalize length: ")
+            print(self.data_stats[1])
 
         ## if balance classes, downsample to smallest class size
         downsampleto = min([len(x) for x in X_])
@@ -176,12 +235,12 @@ class DataProvider:
             self.x_train, self.x_eval, self.y_train, self.y_eval = \
                 train_test_split(X,y,train_size=train_size,test_size=eval_size,stratify=dostrat)
 
-        ## now erase train if no training size. (flag for do not train)
+        ## now erase train if no training size. (downstream flag for do not train)
         if self.train_size <= 0:
             self.x_train = None
             self.y_train = None
 
-        ## now erase eval if no eval size. (flag for do not eval)
+        ## now erase eval if no eval size. (downstream flag for do not eval)
         if self.eval_size <= 0:
             self.x_eval = None
             self.y_eval = None
@@ -245,101 +304,59 @@ class DataProvider:
 
 
 
-def load_amazon_qa_data(local=True):
-    if local:
-        proj_dir = LOCAL_PROJECT_DIR
-    else:
-        proj_dir = GCP_PROJECT_DIR
+
+######### data exploration ##########
+def load_provider_local():
+    proj_dir = LOCAL_PROJECT_DIR
     ## put it all together
     conf = AmazonQADataLoaderConfig(proj_dir)
     loader = AmazonQADataLoader(conf=conf)
-    loader.load(lazy=False)
+    loader.load()
     provider = DataProvider(loader.data,500,100,20)
     print(provider)
     return provider
 
-######### data exploration ##########
-def loader():
-    conf = AmazonQADataLoaderConfig(LOCAL_PROJECT_DIR)
-    loader = AmazonQADataLoader(conf=conf)
-    loader.load()
-    return loader
-
-
-def text_lengths(data):
-    ## get array of texts lengths
-    lengths = []
-    for texts in data:
-        lengths.extend([len(text.split()) for text in texts])
-    return lengths
 
 def text_len_hist(len_arr):
     import matplotlib.pyplot as plt
-    plt.hist(len_arr,bins=1000)
+    plt.hist(len_arr, bins=1000)
     plt.xlabel("text length (words)")
     plt.show()
     return plt
 
-def data_len_stats(len_arr,quantile=90):
-    from scipy import stats as st
-    stats = {}
-    nd_arr=np.array(len_arr)
-    stats['doc_count'] = len(len_arr)
-    stats['mean'] = nd_arr.mean()
-    stats['mode'] = st.mode(nd_arr)
-    stats['quantile_'+str(quantile)]=np.percentile(nd_arr,quantile)
-    stats['max']=nd_arr.max()
-    stats['min']=nd_arr.min()
-    stats['num_empty']=len(nd_arr[nd_arr==0])
-    return stats
-
-
-
-def trim_data_by_textlen(data,quantile=90):
-    ### data is data['X'] of a loader
-    ### trim empty texts and texts of len > quantile (percentile)
-    len_arr = np.array(text_lengths(data))
-    quantile_count = np.percentile(len_arr, quantile)
-    newdata = []
-    def _check_len(text,max_incl):
-        x = len(text.split())
-        return x > 0 and x <= max_incl
-    for texts in data:
-        newtexts = [text for text in texts if _check_len(text,quantile_count)]
-        newdata.append(newtexts)
-
-    return newdata
-
-
 def explore_data():
-    data = loader().data
-    len_arr = text_lengths(data['X'])
-    stats = data_len_stats(len_arr)
+    provider = load_provider_local()
+    stats = provider.data_stats
     print("original data stats")
-    print(stats)
-    plt = text_len_hist(len_arr)
-    new_data = trim_data_by_textlen(data['X'])
-    new_lens = text_lengths(new_data)
+    print(stats[0])
+    plt = text_len_hist(stats[0]['len_arr'])
     print("trimmed data stats")
-    print(data_len_stats(new_lens))
-    plt2 = text_len_hist(new_lens)
+    print(stats[1])
+    plt2 = text_len_hist(stats[1]['len_arr'])
     return (plt,plt2)
 
+### dataset preparation
+def prepare_datasets_for_eval():
+    datasets = [("full",.67,.33,100),
+                ("lrg-30k",30000,10000,100),
+                ("lrg-12k",12000,4000,100),
+                ("lrg-3000",3000,1000,100),
+                ("med-1500",1500,500,100),
+                ("med-900",900,300,100),
+                ("small-600",600,200,100),
+                ("small-450",450,150,100),
+                ("small-300",300,100,100),
+                ("small-150",150,50,100)]
+
+    conf = AmazonQADataLoaderConfig(LOCAL_PROJECT_DIR)
+    loader = AmazonQADataLoader(conf=conf)
+    loader.load()
+    providers = {}
+    for ds in datasets:
+        dp = DataProvider(loader.data, ds[1],ds[2],ds[3])
+        providers[ds[0]]=dp
+    return providers
 
 
-def _cat_dist(data):
-    import numpy as np
-    cat_counts = []
-    labels = data['y']
-    texts_l = data['X']
-    for texts in texts_l:
-        cat_counts.append(len(texts))
-    print(list(zip(labels,cat_counts)))
-    cat_percent = np.array(cat_counts)/np.sum(cat_counts) * 100
-    for x in cat_percent:
-        print("{0:.2f}".format(x))
-data = loader().data
-data['X'] = trim_data_by_textlen(data['X'])
-_cat_dist(data)
 
 

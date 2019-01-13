@@ -32,8 +32,6 @@ class BaselineEstimator(Estimator):
         featurizer = TfidfVectorizer(ngram_range=(1,2))
         mnb = MultinomialNB()
         pipeline = Pipeline([("featurizer", featurizer),("clf",mnb)])
-        ##TODO param grid
-        #params = {"featurizer_ngram_range":[(1,1),(1,2)]}
         self.clf = GridSearchCV(pipeline,{})
         self.id = uuid.uuid5(uuid.NAMESPACE_OID,str(self.clf)).hex
 
