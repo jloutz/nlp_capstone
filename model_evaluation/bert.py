@@ -3,13 +3,15 @@ import numpy
 import os
 import pandas
 
-import data_preparation as data_preparation
-import evaluation
-from base import Estimator, Session, BaselineEstimator
 
 import modeling
 import tokenization
 import tensorflow as tf
+
+import data_preparation as data_preparation
+import evaluation
+from base import Estimator, Session, BaselineEstimator
+
 
 from run_classifier import file_based_input_fn_builder, file_based_convert_examples_to_features, PaddingInputExample, \
     model_fn_builder
