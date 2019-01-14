@@ -434,9 +434,11 @@ def run_bert_tpu(datasets=None, testrun=False,loop=1):
             baseline_sessions.append(baseline_session)
     return (bert_sessions,baseline_sessions)
 
-def run_evaluation_bert(datasets_dir=evaluation.GCP_DATASETS_DIR,output_dir = evaluation.GCP_SESSIONS_DIR, suffix="_1"):
+def run_evaluation_bert(datasets_dir=evaluation.GCP_DATASETS_DIR,output_dir = evaluation.GCP_SESSIONS_DIR, suffix="_1", white_list=None):
     datasets = evaluation.load_datasets_for_evaluation(dir=datasets_dir)
     for key,dataset in datasets.items():
+        if white_list is not None and not key in white_list:
+            continue
         print("*********** START "+key+suffix)
         config = BertEstimatorConfig(
             bert_pretrained_dir=BERT_BASE_MODEL,
