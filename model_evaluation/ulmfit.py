@@ -1,9 +1,7 @@
 import uuid
-
 from fastai.metrics import accuracy
-from fastai.text import TextLMDataBunch, TextClasDataBunch, \
-    language_model_learner, URLs, text_classifier_learner, DatasetType
-from fastai import train
+from fastai.text import *
+from fastai import *
 from fastai.basic_train import Learner
 import data_preparation as data_preparation
 import evaluation
@@ -67,7 +65,7 @@ class ULMFiTSession(Session):
 
     def train(self):
         print("start train")
-        self.estimator.train(self.lm_databunch)
+        self.estimator.train(self.lm_databunch,self.clf_databunch)
 
     def evaluate(self):
         print("start eval")
