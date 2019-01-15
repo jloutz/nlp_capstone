@@ -25,12 +25,18 @@ class ULMFiTEstimator(Estimator):
         self.lm_learn = language_model_learner(lmdata,
                                                pretrained_model=self.pretrained_model,
                                                drop_mult=self.drop_mult)
-        self.lm_learn.fit_one_cycle(self.epoch1)
+        self.lm_learn.fit_one_cycle(self.epoch1,1e-2)
+        self.lm_learn.unfreeze()
+        self.lm_learn.fit_one_cycle(self.epoch1, 1e-3)
+        self.lm_learn.predict("what size is ", n_words=5)
         self.lm_learn.save_encoder('ft_enc')
-        self.clf_learn = text_classifier_learner(clfdata, drop_mult=0.8)
+        self.clf_learn = text_classifier_learner(clfdata, drop_mult=0.5)
         self.clf_learn.load_encoder('ft_enc')
         self.clf_learn.metrics = [accuracy]
-        self.clf_learn.fit_one_cycle(self.epoch2)
+        self.clf_learn.fit_one_cycle(self.epoch2, 1e-2)
+        self.clf_learn.freeze_to(-2)
+        self.clf_learn.fit_one_cycle(self.epoch2, slice(5e-3 / 2., 5e-3))
+        self.clf_learn.fit_one_cycle(self.epoch2,slice(6e-4 / 2., 6e-4))
 
     def evaluate(self, **kwargs):
         preds, targets = self.clf_learn.get_preds()
