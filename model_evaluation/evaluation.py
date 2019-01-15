@@ -97,13 +97,8 @@ class Results:
 
 from data_preparation import DataProvider
 def load_datasets_for_evaluation(dir=LOCAL_DATASETS_DIR,name="datasets_for_eval.pkl"):
-    import tensorflow as tf
-    import pickle
     loadpath = os.path.join(dir,name)
-
     print("Loading {}...".format(loadpath))
-    #with tf.gfile.GFile(loadpath,'rb') as f:
-     #   datasets = pickle.load(f)
     datasets = joblib.load(loadpath)
     print("Done!")
     return datasets
