@@ -12,7 +12,7 @@ import numpy as np
 
 class ULMFiTEstimator(Estimator):
     def __init__(self,epoch1=1,epoch2=5):
-        self.pretrained_model=URLs.WT103
+        self.pretrained_model=URLs.WT103_1
         self.drop_mult=0.7
         self.lm_learner = None
         self.clf_learner = None
@@ -34,14 +34,15 @@ class ULMFiTEstimator(Estimator):
         self.clf_learn.load_encoder('ft_enc')
         self.clf_learn.metrics = [accuracy]
         self.clf_learn.fit_one_cycle(self.epoch2, 1e-2)
-        self.clf_learn.freeze_to(-2)
-        self.clf_learn.fit_one_cycle(self.epoch2, 1e-2)
+        self.clf_learn.unfreeze()
+        self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
         #self.clf_learn.fit_one_cycle(self.epoch2, slice(5e-3 / 2., 5e-3))
         #self.clf_learn.fit_one_cycle(self.epoch2,slice(6e-4 / 2., 6e-4))
 
     def evaluate(self, **kwargs):
         preds, targets = self.clf_learn.get_preds()
         predictions = np.argmax(preds, axis=1)
+        print((predictions,targets))
         return (predictions, targets)
 
     def predict(self, **kwargs):
