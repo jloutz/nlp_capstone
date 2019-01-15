@@ -23,12 +23,12 @@ class ULMFiTEstimator(Estimator):
         self.lm_learn = language_model_learner(lmdata,
                                                pretrained_model=self.pretrained_model,
                                                drop_mult=self.drop_mult)
-        self.lm_learn.fit_one_cycle(1)
+        self.lm_learn.fit_one_cycle(2)
         self.lm_learn.save_encoder('ft_enc')
-        self.clf_learn = text_classifier_learner(clfdata, drop_mult=0.7)
+        self.clf_learn = text_classifier_learner(clfdata, drop_mult=0.5)
         self.clf_learn.load_encoder('ft_enc')
         self.clf_learn.metrics = [accuracy]
-        self.clf_learn.fit_one_cycle(1)
+        self.clf_learn.fit_one_cycle(2)
 
     def evaluate(self, **kwargs):
         preds, targets = self.clf_learn.get_preds()
@@ -36,9 +36,10 @@ class ULMFiTEstimator(Estimator):
         return (predictions, targets)
 
     def predict(self, **kwargs):
-        preds, targets = self.clf_learn.get_preds(ds_type=DatasetType.TEST)
+        preds, targets = self.clf_learn.get_preds(ds_type=DatasetType.Test)
         predictions = np.argmax(preds, axis=1)
         return (predictions, targets)
+    
     def __str__(self):
         return "ULMFiT_Estimator_{}".format(self.id)
 
