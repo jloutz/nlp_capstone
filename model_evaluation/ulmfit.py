@@ -23,12 +23,12 @@ class ULMFiTEstimator(Estimator):
         self.lm_learn = language_model_learner(lmdata,
                                                pretrained_model=self.pretrained_model,
                                                drop_mult=self.drop_mult)
-        self.lm_learn.fit_one_cycle(1)
+        self.lm_learn.fit_one_cycle(5)
         self.lm_learn.save_encoder('ft_enc')
         self.clf_learn = text_classifier_learner(clfdata, drop_mult=0.8)
         self.clf_learn.load_encoder('ft_enc')
         self.clf_learn.metrics = [accuracy]
-        self.clf_learn.fit_one_cycle(5)
+        self.clf_learn.fit_one_cycle(20)
 
     def evaluate(self, **kwargs):
         preds, targets = self.clf_learn.get_preds()
@@ -79,9 +79,11 @@ class ULMFiTSession(Session):
 DATASETS_DIR = "/home/jloutz67/nlp_capstone/data/suites"
 SESSIONS_DIR = "/home/jloutz67/nlp_capstone/results/sessions"
 
-def run_evaluation_ulmfit(datasets_dir=DATASETS_DIR,output_dir = SESSIONS_DIR, suffix="_1"):
+def run_evaluation_ulmfit(datasets_dir=DATASETS_DIR,output_dir = SESSIONS_DIR, suffix="_1",white_list=None):
     datasets = evaluation.load_datasets_for_evaluation(dir=datasets_dir)
     for key,dataset in datasets.items():
+        if white_list is not None and not key in white_list:
+            continue
         print(key)
         estimator = ULMFiTEstimator()
         session = ULMFiTSession(dataset,estimator,key+suffix)
