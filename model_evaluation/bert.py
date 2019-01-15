@@ -12,8 +12,10 @@ import data_preparation as data_preparation
 import evaluation
 from base import Estimator, Session, BaselineEstimator
 
-
-from run_classifier import file_based_input_fn_builder, file_based_convert_examples_to_features, PaddingInputExample, \
+from run_classifier import InputExample,\
+    file_based_input_fn_builder,\
+    file_based_convert_examples_to_features,\
+    PaddingInputExample, \
     model_fn_builder
 
 """
@@ -261,6 +263,20 @@ class BertEstimator(Estimator):
         return "Bert_Estimator_{}".format(self.id)
 
 
+def make_examples_fn(samples,set_type):
+    ## samples should be list of tuples (text,label)
+    examples = []
+    for (i,sample) in enumerate(samples):
+        guid = "%s-%s" % (set_type, i)
+        text = tokenization.convert_to_unicode(sample[0])
+        if set_type == "test":
+           label = "0"
+        else:
+            label = tokenization.convert_to_unicode(sample[1])
+        examples.append(
+            InputExample(guid=guid, text_a=text, label=label))
+    return examples
+
 class BertSession(Session):
     """
     subclass of session which provides InputExamples and label list
@@ -271,6 +287,8 @@ class BertSession(Session):
         super().__init__(data_provider, estimator, name)
         if name:
             name = name.strip()
+        # bert-specific callback for data provider
+        data_provider.make_examples_fn = make_examples_fn
         #patch output path
         if name and os.path.split(estimator.config.output_dir)[1] != name:
             estimator.config.output_dir = os.path.join(estimator.config.output_dir, name)

@@ -19,6 +19,7 @@ class Results:
         self.res_df = self._results_df()
 
     def _load_sessions(self):
+        from numpy.core import multiarray
         sessions = []
         for sessname in self.session_names:
             def load_session_fn(filename, session_name):
@@ -101,9 +102,9 @@ def load_datasets_for_evaluation(dir=LOCAL_DATASETS_DIR,name="datasets_for_eval.
     loadpath = os.path.join(dir,name)
 
     print("Loading {}...".format(loadpath))
-    with tf.gfile.GFile(loadpath,'rb') as f:
-        datasets = pickle.load(f)
-    #datasets = joblib.load(loadpath)
+    #with tf.gfile.GFile(loadpath,'rb') as f:
+     #   datasets = pickle.load(f)
+    datasets = joblib.load(loadpath)
     print("Done!")
     return datasets
 

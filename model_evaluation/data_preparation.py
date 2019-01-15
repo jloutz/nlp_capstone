@@ -6,9 +6,6 @@ import numpy as np
 ## sklearn
 from sklearn.externals import joblib
 from sklearn.model_selection import train_test_split
-# bert-master
-import tokenization
-from run_classifier import InputExample
 
 class DataLoader():
     """
@@ -125,6 +122,7 @@ class DataProvider:
         self.y_eval = None
         self.x_test = None
         self.y_test = None
+        self.make_examples_fn = None
         self.train_examples = None
         self.dev_examples = None
         self.test_examples = None
@@ -253,18 +251,9 @@ class DataProvider:
 
 
     def _make_examples(self,samples,set_type):
-        ## samples should be list of tuples (text,label)
-        examples = []
-        for (i,sample) in enumerate(samples):
-            guid = "%s-%s" % (set_type, i)
-            text = tokenization.convert_to_unicode(sample[0])
-            #if set_type == "test":
-             #   label = "0"
-            #else:
-            label = tokenization.convert_to_unicode(sample[1])
-            examples.append(
-                InputExample(guid=guid, text_a=text, label=label))
-        return examples
+        if self.make_examples_fn is None:
+            raise NotImplementedError()
+        return self.make_examples_fn(samples,set_type)
 
 
     def get_train_examples(self):

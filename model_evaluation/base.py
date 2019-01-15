@@ -9,7 +9,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score
-
+from sklearn.externals import joblib
 import evaluation
 
 
@@ -132,10 +132,8 @@ class Session():
 
     def persist(self,output_dir):
         import os
-        import pickle
-        import tensorflow as tf
-        ## use tensorflow dir handling - good for google cloud
-        tf.gfile.MakeDirs(output_dir)
+
+        os.makedirs(output_dir,exist_ok=True)
         output_path = os.path.join(output_dir,self.persist_name())
         obj = {}
         if self.data_provider.x_train:
@@ -151,11 +149,9 @@ class Session():
             obj["y_test"] = self.data_provider.y_test
         if self.prediction_results is not None:
             obj["prediction_results"] = self.prediction_results
-
-        with tf.gfile.GFile(output_path, "w") as f:
-            print("Dumping a big fat pickle to {}...".format(output_path))
-            pickle.dump(obj, f)
-            print("Done!")
+        print("Dumping a big fat pickle to {}...".format(output_path))
+        joblib.dump(obj, output_path)
+        print("Done!")
 
     def persist_name(self):
         persist_name = self.__str__()

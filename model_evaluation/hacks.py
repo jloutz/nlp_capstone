@@ -1,11 +1,42 @@
 """
 cesspool of necessary evils...
-hopefully not needed anymore, but kept here as a
+one-shot hacks needed during implementaion. Kept here as a
 tribute to the god of spaghetti-code
 """
 import data_preparation as prep
+import evaluation
 from base import BaselineEstimator, Session
 from run_classifier import InputExample, PaddingInputExample
+
+
+## copy - constructor
+## early version of data provider had bert-specific code.
+## After refactoring (for use with ulmfit) I needed to get providers
+## with the same datasets.
+def data_provider_from_data_provider(provider):
+    new_provider = prep.DataProvider()
+    new_provider.x_train = provider.x_train
+    new_provider.train_size = len(provider.x_train)
+    new_provider.y_train = provider.y_train
+    new_provider.labels = list(set(provider.y_train))
+    new_provider.x_eval = provider.x_eval
+    new_provider.eval_size = len(provider.x_eval)
+    new_provider.y_eval = provider.y_eval
+    new_provider.x_test = provider.x_test
+    new_provider.test_size = len(provider.x_test)
+    new_provider.y_test = provider.y_test
+    new_provider.labels = provider.labels
+    new_provider.data = provider.data
+    new_provider.data_stats = provider.data_stats
+    return new_provider
+
+def reconstruct_datasets():
+    new_ds = {}
+    datasets = evaluation.load_datasets_for_evaluation()
+    for key, dp in datasets.items():
+        new_dp = data_provider_from_data_provider(dp)
+        new_ds[key]=new_dp
+    return new_ds
 
 
 class UglyDataProvider(prep.DataProvider):
