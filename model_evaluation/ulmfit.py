@@ -77,8 +77,8 @@ class ULMFiTSession(Session):
         print("start predict")
         self.prediction_results = self.estimator.predict()
 
-DATASETS_DIR = "/home/jloutz67/npl_capstone/data/suites"
-SESSIONS_DIR = "/home/jloutz67/npl_capstone/results/sessions"
+DATASETS_DIR = "/home/jloutz67/nlp_capstone/data/suites"
+SESSIONS_DIR = "/home/jloutz67/nlp_capstone/results/sessions"
 
 def run_evaluation_ulmfit(datasets_dir=DATASETS_DIR,output_dir = SESSIONS_DIR, suffix="_1"):
     datasets = evaluation.load_datasets_for_evaluation(dir=datasets_dir)
