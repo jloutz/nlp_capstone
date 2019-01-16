@@ -20,11 +20,12 @@ class Results:
 
     def _load_sessions(self):
         from numpy.core import multiarray
+        from fastai import torch_core
         sessions = []
         for sessname in self.session_names:
             def load_session_fn(filename, session_name):
                 estimator_type = ("baseline" if filename.find("Baseline_Estimator") > -1 else "bert" if filename.find(
-                    "Bert_Estimator") > -1 else "")
+                    "Bert_Estimator") > -1 else "ulmfit" if filename.find("ulmfit")> -1 else "")
                 dataset_id = re.findall(".*DataProvider-([a-zA-z0-9]+)-.*", filename)[0][-4:]
                 short_name="-".join((session_name, estimator_type, dataset_id))
                 print("Loading with shortname: ",short_name)
@@ -44,13 +45,20 @@ class Results:
         for session in self.sessions:
             row_index.append(session["name"])
             datarow = [session["session_name"],session["estimator_type"],session["dataset_id"]]
+            eval_score = -1
             if session["estimator_type"]=="baseline":
                 eval_score = session["evaluation_results"][2]
-            else:
+            elif session["estimator_type"]=="bert":
                 eval_score = session["evaluation_results"]["eval_accuracy"]
+            elif session["estimator_type"] == "ulmfit":
+                pred, true = session["evaluation_results"]["eval_accuracy"]
+                eval_score =  len([pred[i] for i in range(len(pred)) if pred[i]==true[i]])
             datarow.append(eval_score)
             pred_df = session["prediction_results"]
-            pred_score = len(pred_df[pred_df["true"]==pred_df["pred"]])/len(pred_df)
+            if session["estimator_type"] == "ulmfit":
+                pred_score = len(pred_df[pred_df["true"]==pred_df["pred"]])/len(pred_df)
+            else:
+                pred_score ==0
             datarow.append(pred_score)
             data.append(datarow)
         res_df = pd.DataFrame(data,row_index,cols)

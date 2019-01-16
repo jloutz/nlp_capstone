@@ -32,24 +32,27 @@ class ULMFiTEstimator(Estimator):
         self.lm_learn = language_model_learner(lmdata,
                                                pretrained_model=self.pretrained_model,
                                                drop_mult=self.drop_mult)
-        self.lm_learn.freeze()##only last layer trainable
+        self.lm_learn.freeze()
+        ## 1e-1 previously found as acceptable learning rate with learn.lr_find
+        ## lr_range creates learning rates for each layer (discriminative training)
         lrr = self.lm_learn.lr_range(slice(1e-1, 1e-3))
+        ## now start layer unfreezing
+        ##only last layer trainable
         self.lm_learn.fit_one_cycle(self.epoch1,lrr)
+        ## train next layer
         self.lm_learn.freeze_to(-2)
         self.lm_learn.fit_one_cycle(self.epoch1, lrr)
+        ## train next layer
         self.lm_learn.freeze_to(-3)
         self.lm_learn.fit_one_cycle(self.epoch1, lrr)
 
         print(self.lm_learn.predict("what size is ", n_words=5))
         self.lm_learn.save_encoder('ft_enc')
 
+        ## now train last layer of classifier
         self.clf_learn = text_classifier_learner(clfdata, drop_mult=self.drop_mult)
         self.clf_learn.load_encoder('ft_enc')
         self.clf_learn.metrics = [accuracy]
-        self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
-        #self.clf_learn.freeze_to(-2)
-        #self.clf_learn.fit_one_cycle(self.epoch2, lrr)
-        #self.clf_learn.freeze_to(-3)
         self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
 
     def evaluate(self, **kwargs):
