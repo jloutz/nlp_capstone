@@ -13,7 +13,7 @@ import numpy as np
 class ULMFiTEstimator(Estimator):
     def __init__(self,epoch1=1,epoch2=5):
         self.pretrained_model=URLs.WT103_1
-        self.drop_mult=0.7
+        self.drop_mult=0.5
         self.lm_learner = None
         self.clf_learner = None
         self.epoch1=epoch1
@@ -32,17 +32,25 @@ class ULMFiTEstimator(Estimator):
         self.lm_learn = language_model_learner(lmdata,
                                                pretrained_model=self.pretrained_model,
                                                drop_mult=self.drop_mult)
-        ## TODO
-        self.lm_learn.fit_one_cycle(self.epoch1,1e-2)
-        self.lm_learn.unfreeze()
-        self.lm_learn.fit_one_cycle(self.epoch1, 1e-3)
+        self.lm_learn.freeze()##only last layer trainable
+        lrr = self.lm_learn.lr_range(slice(1e-1, 1e-3))
+        self.lm_learn.fit_one_cycle(self.epoch1,lrr)
+        self.lm_learn.freeze_to(-2)
+        self.lm_learn.fit_one_cycle(self.epoch1, lrr)
+        self.lm_learn.freeze_to(-3)
+        self.lm_learn.fit_one_cycle(self.epoch1, lrr)
+
         print(self.lm_learn.predict("what size is ", n_words=5))
         self.lm_learn.save_encoder('ft_enc')
-        self.clf_learn = text_classifier_learner(clfdata, drop_mult=0.5)
+
+        self.clf_learn = text_classifier_learner(clfdata, drop_mult=self.drop_mult)
         self.clf_learn.load_encoder('ft_enc')
         self.clf_learn.metrics = [accuracy]
-        self.clf_learn.fit_one_cycle(self.epoch2, 1e-2)
-        self.clf_learn.unfreeze()
+
+        self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
+        self.clf_learn.freeze_to(-2)
+        self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
+        self.clf_learn.freeze_to(-3)
         self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
         #self.clf_learn.fit_one_cycle(self.epoch2, slice(5e-3 / 2., 5e-3))
         #self.clf_learn.fit_one_cycle(self.epoch2,slice(6e-4 / 2., 6e-4))
