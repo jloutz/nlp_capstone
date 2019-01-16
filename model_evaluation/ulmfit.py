@@ -46,12 +46,11 @@ class ULMFiTEstimator(Estimator):
         self.clf_learn = text_classifier_learner(clfdata, drop_mult=self.drop_mult)
         self.clf_learn.load_encoder('ft_enc')
         self.clf_learn.metrics = [accuracy]
-        lrr = self.clf_learn.lr_range(slice(1e-1, 1e-6))
-        self.clf_learn.fit_one_cycle(self.epoch2, lrr)
-        self.clf_learn.freeze_to(-2)
-        self.clf_learn.fit_one_cycle(self.epoch2, lrr)
+        self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
+        #self.clf_learn.freeze_to(-2)
+        #self.clf_learn.fit_one_cycle(self.epoch2, lrr)
         #self.clf_learn.freeze_to(-3)
-        self.clf_learn.fit_one_cycle(self.epoch2, lrr)
+        self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
 
     def evaluate(self, **kwargs):
         preds, targets = self.clf_learn.get_preds()
