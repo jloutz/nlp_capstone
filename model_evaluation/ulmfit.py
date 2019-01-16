@@ -48,7 +48,7 @@ class ULMFiTEstimator(Estimator):
         self.clf_learn = text_classifier_learner(clfdata, drop_mult=self.drop_mult)
         self.clf_learn.load_encoder('ft_enc')
         self.clf_learn.metrics = [accuracy]
-        lrr = self.lm_learn.lr_range(slice(1e-5, 1e-1))
+        lrr = self.clf_learn.lr_range(slice(1e-5, 1e-1))
         self.clf_learn.fit_one_cycle(self.epoch2, lrr)
         self.clf_learn.freeze_to(-1)
         self.clf_learn.fit_one_cycle(self.epoch2, lrr)
