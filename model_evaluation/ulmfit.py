@@ -21,10 +21,18 @@ class ULMFiTEstimator(Estimator):
         self.id = uuid.uuid5(uuid.NAMESPACE_OID, str([self.pretrained_model,self.drop_mult])).hex
         pass
 
+    def init_learners(self,lmdata,clfdata):
+        self.lm_learn = language_model_learner(lmdata,
+                                               pretrained_model=self.pretrained_model,
+                                               drop_mult=self.drop_mult)
+        self.clf_learn = text_classifier_learner(clfdata, drop_mult=0.5)
+
+
     def train(self, lmdata, clfdata):
         self.lm_learn = language_model_learner(lmdata,
                                                pretrained_model=self.pretrained_model,
                                                drop_mult=self.drop_mult)
+        ## TODO
         self.lm_learn.fit_one_cycle(self.epoch1,1e-2)
         self.lm_learn.unfreeze()
         self.lm_learn.fit_one_cycle(self.epoch1, 1e-3)
@@ -56,7 +64,7 @@ class ULMFiTEstimator(Estimator):
 
 
 class ULMFiTSession(Session):
-    def __init__(self, data_provider: data_preparation.DataProvider, estimator: Estimator, name=""):
+    def __init__(self, data_provider: data_preparation.DataProvider, estimator: ULMFiTEstimator, name=""):
         super().__init__(data_provider, estimator, name)
         # make df out of X and y
         _trn = {"label": self.data_provider.y_train, "text": self.data_provider.x_train}
@@ -73,6 +81,7 @@ class ULMFiTSession(Session):
                                                        train_df=df_trn, valid_df=df_val, test_df=df_test,
                                                        vocab=self.lm_databunch.train_ds.vocab,
                                                        bs=32)
+        estimator.init_learners(self.lm_databunch,self.clf_databunch)
 
     def train(self):
         print("start train")
@@ -88,6 +97,19 @@ class ULMFiTSession(Session):
 
 DATASETS_DIR = "/home/jloutz67/nlp_capstone/data/suites"
 SESSIONS_DIR = "/home/jloutz67/nlp_capstone/results/sessions"
+
+def init_sessions(white_list='med-900'):
+    sessions = []
+    datasets = evaluation.load_datasets_for_evaluation(dir=DATASETS_DIR)
+    for key, dataset in datasets.items():
+        if white_list is not None and not key in white_list:
+            continue
+        print(key)
+        estimator = ULMFiTEstimator()
+        session = ULMFiTSession(dataset, estimator, key)
+        sessions.append(session)
+    return sessions
+
 
 def run_evaluation_ulmfit(datasets_dir=DATASETS_DIR,output_dir = SESSIONS_DIR, suffix="_1",white_list=None,
                           epoch1=1,epoch2=5):
