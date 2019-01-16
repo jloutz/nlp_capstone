@@ -35,6 +35,8 @@ class ULMFiTEstimator(Estimator):
         self.lm_learn.freeze()##only last layer trainable
         lrr = self.lm_learn.lr_range(slice(1e-1, 1e-3))
         self.lm_learn.fit_one_cycle(self.epoch1,lrr)
+        self.lm_learn.freeze_to(-1)
+        self.lm_learn.fit_one_cycle(self.epoch1, lrr)
         self.lm_learn.freeze_to(-2)
         self.lm_learn.fit_one_cycle(self.epoch1, lrr)
         self.lm_learn.freeze_to(-3)
@@ -46,19 +48,19 @@ class ULMFiTEstimator(Estimator):
         self.clf_learn = text_classifier_learner(clfdata, drop_mult=self.drop_mult)
         self.clf_learn.load_encoder('ft_enc')
         self.clf_learn.metrics = [accuracy]
-
-        self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
+        lrr = self.lm_learn.lr_range(slice(1e-5, 1e-1))
+        self.clf_learn.fit_one_cycle(self.epoch2, lrr)
+        self.clf_learn.freeze_to(-1)
+        self.clf_learn.fit_one_cycle(self.epoch2, lrr)
         self.clf_learn.freeze_to(-2)
-        self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
+        self.clf_learn.fit_one_cycle(self.epoch2, lrr)
         self.clf_learn.freeze_to(-3)
-        self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
-        #self.clf_learn.fit_one_cycle(self.epoch2, slice(5e-3 / 2., 5e-3))
-        #self.clf_learn.fit_one_cycle(self.epoch2,slice(6e-4 / 2., 6e-4))
+        self.clf_learn.fit_one_cycle(self.epoch2, lrr)
 
     def evaluate(self, **kwargs):
         preds, targets = self.clf_learn.get_preds()
         predictions = np.argmax(preds, axis=1)
-        print((predictions,targets))
+        #print((predictions,targets))
         return (predictions, targets)
 
     def predict(self, **kwargs):
