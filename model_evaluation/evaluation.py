@@ -52,7 +52,7 @@ class Results:
                 eval_score = session["evaluation_results"]["eval_accuracy"]
             elif session["estimator_type"] == "ulmfit":
                 pred, true = session["evaluation_results"]
-                eval_score =  len([pred[i] for i in range(len(pred)) if pred[i]==true[i]])
+                eval_score =  len([pred[i] for i in range(len(pred)) if pred[i]==true[i]])/len(pred)
             datarow.append(eval_score)
             pred_df = session["prediction_results"]
             if session["estimator_type"] == "ulmfit":
