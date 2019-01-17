@@ -56,9 +56,9 @@ class Results:
             datarow.append(eval_score)
             pred_df = session["prediction_results"]
             if session["estimator_type"] == "ulmfit":
-                pred_score = len(pred_df[pred_df["true"]==pred_df["pred"]])/len(pred_df)
-            else:
                 pred_score ==0
+            else:
+                pred_score = len(pred_df[pred_df["true"]==pred_df["pred"]])/len(pred_df)
             datarow.append(pred_score)
             data.append(datarow)
         res_df = pd.DataFrame(data,row_index,cols)
