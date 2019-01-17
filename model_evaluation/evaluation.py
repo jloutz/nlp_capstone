@@ -25,7 +25,7 @@ class Results:
         for sessname in self.session_names:
             def load_session_fn(filename, session_name):
                 estimator_type = ("baseline" if filename.find("Baseline_Estimator") > -1 else "bert" if filename.find(
-                    "Bert_Estimator") > -1 else "ulmfit" if filename.find("ulmfit")> -1 else "")
+                    "Bert_Estimator") > -1 else "ulmfit" if filename.find("ULMFiT")> -1 else "")
                 dataset_id = re.findall(".*DataProvider-([a-zA-z0-9]+)-.*", filename)[0][-4:]
                 short_name="-".join((session_name, estimator_type, dataset_id))
                 print("Loading with shortname: ",short_name)
