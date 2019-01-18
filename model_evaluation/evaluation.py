@@ -6,6 +6,8 @@ import os
 
 LOCAL_SESSIONS_DIR = "C:/Projects/udacity-capstone/results/sessions"
 GCP_SESSIONS_DIR = "gs://nlpcapstone_bucket/sessions"
+GCP_LOCAL_SESSIONS_DIR = "/home/jloutz67/nlp_capstone/results/sessions"
+
 
 LOCAL_DATASETS_DIR = "C:/Projects/udacity-capstone/data/suites"
 GCP_DATASETS_DIR = "gs://nlpcapstone_bucket/suites"

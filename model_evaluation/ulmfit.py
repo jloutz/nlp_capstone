@@ -32,28 +32,56 @@ class ULMFiTEstimator(Estimator):
         self.lm_learn = language_model_learner(lmdata,
                                                pretrained_model=self.pretrained_model,
                                                drop_mult=self.drop_mult)
-        self.lm_learn.freeze()
+
+        ## learn using discriminative training and gradual unfreezing
+        numlayers = len(self.lm_learn.layer_groups)
+        print("lm learner has {} layers ",numlayers)
+        stop = 0-(numlayers)
         ## 1e-1 previously found as acceptable learning rate with learn.lr_find
         ## lr_range creates learning rates for each layer (discriminative training)
         lrr = self.lm_learn.lr_range(slice(1e-1, 1e-3))
-        ## now start layer unfreezing
-        ##only last layer trainable
-        self.lm_learn.fit_one_cycle(self.epoch1,lrr)
-        ## train next layer
-        self.lm_learn.freeze_to(-2)
-        self.lm_learn.fit_one_cycle(self.epoch1, lrr)
-        ## train next layer
-        self.lm_learn.freeze_to(-3)
-        self.lm_learn.fit_one_cycle(self.epoch1, lrr)
+        for i in range(self.epoch1):
+            print("Training for Epoch ",i+1)
+            self.lm_learn.freeze()
+            ## now start layer unfreezing
+            ##only last layer trainable
+            self.lm_learn.fit_one_cycle(1,lrr)
+            layer_num_inverted = -2 ## not second layer, but second from last
+            ## train next layers
+            while layer_num_inverted > numlayers:
+                print("freeze to ",layer_num_inverted)
+                self.lm_learn.freeze_to(layer_num_inverted)
+                self.lm_learn.fit_one_cycle(1, lrr)
+                layer_num_inverted = layer_num_inverted-1
+
 
         print(self.lm_learn.predict("what size is ", n_words=5))
         self.lm_learn.save_encoder('ft_enc')
 
-        ## now train last layer of classifier
+        ## now train classifier using gradual unfreezing and discriminative fine-tuning
+        print("####### Fine-tuning classifier")
         self.clf_learn = text_classifier_learner(clfdata, drop_mult=self.drop_mult)
+        numlayers = len(self.clf_learn.layer_groups)
+        print("clf learner has {} layers ", numlayers)
         self.clf_learn.load_encoder('ft_enc')
         self.clf_learn.metrics = [accuracy]
-        self.clf_learn.fit_one_cycle(self.epoch2, 1e-3)
+        ## 1e-3 previously found as acceptable learning rate with learn.lr_find
+        ## lr_range creates learning rates for each layer (discriminative training)
+        lrr = self.clf_learn.lr_range(slice(1e-3, 1e-4))
+        for i in range(self.epoch2):
+            print("Training for Epoch ",i+1)
+            self.clf_learn.freeze()
+            ## now start layer unfreezing
+            ##only last layer trainable
+            self.clf_learn.fit_one_cycle(1, lrr)
+            layer_num_inverted = -2  ## not second layer, but second from last
+            ## train next layers
+            while layer_num_inverted > numlayers:
+                print("freeze to ", layer_num_inverted)
+                self.clf_learn.freeze_to(layer_num_inverted)
+                self.clf_learn.fit_one_cycle(1, lrr)
+                layer_num_inverted = layer_num_inverted - 1
+
 
     def evaluate(self, **kwargs):
         preds, targets = self.clf_learn.get_preds()
@@ -120,7 +148,7 @@ def init_sessions(white_list='med-900'):
 
 
 def run_evaluation_ulmfit(datasets_dir=DATASETS_DIR,output_dir = SESSIONS_DIR, suffix="_1",white_list=None,
-                          epoch1=1,epoch2=5):
+                          epoch1=7,epoch2=7):
     datasets = evaluation.load_datasets_for_evaluation(dir=datasets_dir)
     for key,dataset in datasets.items():
         if white_list is not None and not key in white_list:
