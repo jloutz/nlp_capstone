@@ -48,7 +48,7 @@ class ULMFiTEstimator(Estimator):
             self.lm_learn.fit_one_cycle(1,lrr)
             layer_num_inverted = -2 ## not second layer, but second from last
             ## train next layers
-            while layer_num_inverted > numlayers:
+            while layer_num_inverted > -numlayers:
                 print("freeze to ",layer_num_inverted)
                 self.lm_learn.freeze_to(layer_num_inverted)
                 self.lm_learn.fit_one_cycle(1, lrr)
@@ -76,7 +76,7 @@ class ULMFiTEstimator(Estimator):
             self.clf_learn.fit_one_cycle(1, lrr)
             layer_num_inverted = -2  ## not second layer, but second from last
             ## train next layers
-            while layer_num_inverted > numlayers:
+            while layer_num_inverted > -numlayers:
                 print("freeze to ", layer_num_inverted)
                 self.clf_learn.freeze_to(layer_num_inverted)
                 self.clf_learn.fit_one_cycle(1, lrr)
