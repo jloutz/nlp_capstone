@@ -25,7 +25,7 @@ class ULMFiTEstimator(Estimator):
         self.lm_learn = language_model_learner(lmdata,
                                                pretrained_model=self.pretrained_model,
                                                drop_mult=self.drop_mult)
-        self.clf_learn = text_classifier_learner(clfdata, drop_mult=0.5)
+        self.clf_learn = text_classifier_learner(clfdata, drop_mult=self.drop_mult)
 
 
     def train(self, lmdata, clfdata):
@@ -161,3 +161,8 @@ def run_evaluation_ulmfit(datasets_dir=DATASETS_DIR,output_dir = SESSIONS_DIR, s
         #print(session.evaluation_results[2])
         session.predict()
         session.persist(output_dir=output_dir)
+
+def ulmfit_results():
+    import evaluation
+    r = evaluation.Results()
+    return r

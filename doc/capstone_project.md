@@ -389,13 +389,17 @@ The extracted text is saved in the data loader "data" attribute. This data is th
 - **Exposes the samples** in a format appropriate for the different classifiers in the evaluation. For example, BERT requires a list of Instances of `TrainingExample` objects, whereas the scikit-learn based baseline classifier requires two arrays, one "X" array of training texts, and a "y" array of the corresponding labels. 
 
 ### Implementation
-A particular coding challenge for this evaluation was in analyzing and understanding the open source BERT code, and getting it to work with this dataset. Because of the complexity of this code, I decided to do some object oriented analysis and design as a method of understanding the code and incorporating it into this evaluation. 
+A particular coding challenge for this evaluation was in analyzing and understanding the open source code for ULMFiT and BERT, and getting that code to work with this dataset. Because of the complexity of this code, I decided to do some object oriented analysis and design as a method of understanding the code and incorporating it into this evaluation. 
 
 The BERT code used as a starting point for the BERT implementation here is available at: 
 
 https://github.com/google-research/bert
 
 The script `run_classifier.py`provides the boilerplate for implementing a custom classifier with BERT.  This code was cloned and added as a source dependency to the project.  
+
+For ULMFiT, the [fastai](https://docs.fast.ai/text.html)  wrapper for ulmfit was used.
+
+ 
 
 The goal of the analysis and design was to produce a suite of classes, interfaces, and implementations that would provide the functionality of evaluating all three classifiers (baseline, ULMFiT, BERT) on the same set of dataset samples, and record the results. I wanted to do this in a way that provided a consistent API, was manageable and readable, and had a minimum of "spaghetti code". 
 
@@ -472,11 +476,26 @@ The BERT estimator uses the BERT-internal `FullTokenizer`. This tokenizer conver
 
 ```
 
-TODO ULMFiT
+Text preprocessing for ULMFiT takes place when creating a `TextDataBunch` object - part of the `fastai` api for ulmfit. 
+
+```python
+## create text bunches out of label, text dataframes. 
+# Language model data
+self.lm_databunch = TextLMDataBunch.from_df(
+    train_df=df_trn, valid_df=df_val, test_df=df_test, path="")
+# Classifier model data
+self.clf_databunch = TextClasDataBunch.from_df(path="",
+    train_df=df_trn, valid_df=df_val, test_df=df_test,                                                   vocab=self.lm_databunch.train_ds.vocab, bs=32)
+
+```
+
+
+
+The `Tokenizer` under the hood normalizes whitespace, converts to lowercase, and does other ulmfit-specific transformations. The details are found in the `fastai.transform` module 
 
 ##### Estimator Hyperparameters
 
-The baseline estimator uses an alpha value of 1 for `MultinomialNB`. 
+The baseline estimator uses an `alpha` value of 1 for `MultinomialNB`.  Trying other values for `alpha` did not result in any improvement
 
 The hyperparameters for BERT are extensive. It was prohibitive to do an extensive parameter tune due to the time and expense of running BERT on cloud TPU machines, so the defaults recommended by the BERT team were used. The relevant hyperparameters used  are as shown below:
 
@@ -570,3 +589,7 @@ _(approx. 1-2 pages)_
 [Merity et al. 2017]: https://arxiv.org/abs/1708.02182 "Regularizing and Optimizing LSTM Language Models "
 [Merity et al. 2017b]: https://www.salesforce.com/products/einstein/ai-research/the-wikitext-dependency-language-modeling-dataset/
 [Vaswani et al.]: https://arxiv.org/abs/1706.03762 "Attention is all you need"
+[ fastai ulmfit wrapper]: https://docs.fast.ai/text.html "fastai documentation for ulmfit"
+
+
+

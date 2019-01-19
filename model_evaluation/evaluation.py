@@ -5,6 +5,8 @@ import pandas as pd
 import os
 
 LOCAL_SESSIONS_DIR = "C:/Projects/udacity-capstone/results/sessions"
+LOCAL_ULMFIT_SESSIONS_DIR = "C:/Projects/udacity-capstone/results/ulmfit_sessions"
+
 GCP_SESSIONS_DIR = "gs://nlpcapstone_bucket/sessions"
 GCP_LOCAL_SESSIONS_DIR = "/home/jloutz67/nlp_capstone/results/sessions"
 
@@ -14,15 +16,16 @@ GCP_DATASETS_DIR = "gs://nlpcapstone_bucket/suites"
 
 
 class Results:
-    def __init__(self):
+    def __init__(self,sessions_dir=LOCAL_SESSIONS_DIR):
         self.session_names = ("small-150", "small-300", "small-450", "small-600", "med-900",
                               "med-1500", "lrg-3000", "lrg-12k", "lrg-30k", "full",)
+        self.sessions_dir = sessions_dir
         self.sessions = self._load_sessions()
         self.res_df = self._results_df()
 
     def _load_sessions(self):
-        from numpy.core import multiarray
-        from fastai import torch_core
+        #from numpy.core import multiarray
+        #from fastai import torch_core
         sessions = []
         for sessname in self.session_names:
             def load_session_fn(filename, session_name):
@@ -37,7 +40,7 @@ class Results:
                 dict["estimator_type"]=estimator_type
                 dict["dataset_id"]=dataset_id
                 return dict
-            sessions.extend([load_session_fn(fname,sessname) for fname in glob.glob(LOCAL_SESSIONS_DIR + "/*" + sessname + "*.pkl")])
+            sessions.extend([load_session_fn(fname,sessname) for fname in glob.glob(self.sessions_dir+ "/*" + sessname + "*.pkl")])
         return sessions
 
     def _results_df(self):
@@ -66,40 +69,43 @@ class Results:
         res_df = pd.DataFrame(data,row_index,cols)
         return res_df
 
-    def get_mean_scores(self):
-        base = self.res_df[self.res_df['est_type']=='baseline']
-        bert = self.res_df[self.res_df['est_type'] == 'bert']
-        baseres = base.groupby(("sess_name","est_type"),sort=False).mean()
-        bertres = bert.groupby(("sess_name", "est_type"), sort=False).mean()
-        return (baseres,bertres)
+    @classmethod
+    def get_max_scores(cls,res_df):
+        base = res_df[res_df['est_type']=='baseline']
+        bert = res_df[res_df['est_type'] == 'bert']
+        ulmfit = res_df[res_df['est_type'] == 'ulmfit']
+        baseres = base.groupby(("sess_name","est_type"),sort=False).max()
+        bertres = bert.groupby(("sess_name", "est_type"), sort=False).max()
+        ulmres = ulmfit.groupby(("sess_name", "est_type"), sort=False).max()
+        return (baseres,bertres,ulmres)
 
-    def show_results_hist(self,norm=False):
+    @classmethod
+    def show_results_hist(cls,df,session_names):
         import matplotlib.pyplot as plt
         import numpy as np
-        scores = self.get_mean_scores()
+        scores = cls.get_max_scores(df)
         base_eval=scores[0].eval_score
         bert_eval=scores[1].eval_score
+        ulmfit_eval = scores[2].eval_score
 
-        if norm:
-            max = np.max(bert_eval)
-            base_eval = base_eval/max
-            bert_eval = bert_eval/max
-
-
-        ind = np.arange(len(base_eval))  # the x locations for the groups
-        width = 0.35  # the width of the bars
+        ind = np.arange(len(base_eval))  # the x locations for the groupsnp.arange(
+        width = 0.25  # the width of the bars
 
         fig, ax = plt.subplots()
-        rects1 = ax.bar(ind - width / 2, base_eval, width,
-                        color='SkyBlue', label='Baseline')
-        rects2 = ax.bar(ind + width / 2, bert_eval, width,
-                        color='IndianRed', label='BERT')
+        rects1 = ax.bar(ind - width, ulmfit_eval, width,
+                        color='lightslategray', label='ULMFiT')
+
+        rects3 = ax.bar(ind + width, bert_eval, width,
+                        color='steelblue', label='BERT')
+        rects2 = ax.bar(ind, base_eval, width,
+                        color='IndianRed', label='Baseline')
 
         # Add some text for labels, title and custom x-axis tick labels, etc.
         ax.set_ylabel('Accuracy')
         ax.set_title('Accuracy Scores by Dataset and Estimator')
         ax.set_xticks(ind)
-        ax.set_xticklabels(self.session_names)
+        ax.set_xticklabels(session_names,rotation=45)
+
         ax.legend()
 
         plt.show()
@@ -112,6 +118,14 @@ def load_datasets_for_evaluation(dir=LOCAL_DATASETS_DIR,name="datasets_for_eval.
     datasets = joblib.load(loadpath)
     print("Done!")
     return datasets
+
+
+def load_and_show_results(filepath):
+    res_df = joblib.load(filepath)
+    session_names = ("small-150", "small-300", "small-450", "small-600", "med-900",
+                          "med-1500", "lrg-3000", "lrg-12k", "lrg-30k", "full",)
+
+    Results.show_results_hist(res_df,session_names)
 
 
 

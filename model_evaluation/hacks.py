@@ -149,7 +149,9 @@ def run_baseline_with_bert_session_data():
         print(baseline_session)
         print("Baseline results: ", baseline_session.evaluation_results[2])
 
-
+### for dumb technical reasons that I didn't want to spend too much time to solve, I couldn't get the ULMFiT data structures
+### unpickled in my local dev environment (after producing them in the cloud on GPU-machines).
+### So I just copied the values here
 def plot_lm_lr(skip_start: int = 10, skip_end: int = 5) -> None:
     ## plot ulmfit lrs
     lrs = [1e-07, 1.202264434617413e-07, 1.4454397707459274e-07, 1.7378008287493754e-07, 2.0892961308540395e-07,
@@ -260,3 +262,44 @@ def plot_clf_lr(skip_start: int = 10, skip_end: int = 5) -> None:
     ax.set_xscale('log')
     ax.xaxis.set_major_formatter(plt.FormatStrFormatter('%.0e'))
     plt.show()
+
+### couldn't unpickle ulmfit sessions..
+# just making a data frame here from results copy-pasted from cloud environment.
+def ulmfit_results():
+    import pandas as pd
+    cols = ("sess_name", "est_type", "ds_id", "eval_score", "pred_score")
+    idc = [
+        "small-150-ulmfit-8766",
+        "small-300-ulmfit-4ef3",
+        "small-450-ulmfit-b095",
+        "small-600-ulmfit-c165",
+        "med-900-ulmfit-1dca",
+        "med-1500-ulmfit-3c7b",
+        "lrg-3000-ulmfit-ob16",
+        "lrg-12k-ulmfit-cc41",
+        "lrg-30k-ulmfit-01af",
+        "full-ulmfit-4c4f"
+    ]
+    data = [
+        ['small-150','ulmfit','8766',0.16,0],
+        ['small-300', 'ulmfit', '4ef3', 0.13, 0],
+        ['small-450', 'ulmfit', 'b095', 0.1467, 0],
+        ['small-600', 'ulmfit', 'c165', 0.21, 0],
+        ['med-900', 'ulmfit', 'ldca', 0.263, 0],
+        ['med-1500', 'ulmfit', '3c7b', 0.352, 0],
+        ['lrg-3000', 'ulmfit', 'ob16', 0.46, 0],
+        ['lrg-12k', 'ulmfit', 'cc41', 0.564, 0],
+        ['lrg-30k', 'ulmfit', '01af', 0.638, 0],
+        ['full', 'ulmfit', '4c4f', 0.703, 0],
+    ]
+    res = pd.DataFrame(data,idc,cols)
+    return res
+
+
+
+
+
+
+
+
+
