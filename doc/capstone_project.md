@@ -57,7 +57,6 @@ Can pretrained language models result in classifiers that can generalize well wh
 
 - classify texts with features that were not explicitly seen in the (fine-tuning) training set? 
 - "understand" out-of-vocabulary words?
-- classify well taking polysemy and synonyms into account?
 
 Can these classifiers perform better than well-known benchmark classifiers?
 
@@ -291,14 +290,11 @@ The first real step of preprocessing is to extract the question and answers from
 The class `AmazonQADataLoader` takes over the above tasks of tarball extraction, sentence pair extraction, and label and text array construction. The method for extracting texts and building label array is:
 
 ```python
-    def _extract_text_and_labels(self,lazy=True):
         ## parse data in json files preserving only labels (category name) and texts
         ## both questions and answers found in json are 
         ## treated as example texts for   each category
-        
-        ....        
-        
-        for category_file_name in os.listdir(self.json_dir):
+   
+	for category_file_name in os.listdir(self.json_dir):
             print("Loading text from: ", category_file_name)
             label = re.split("qa_(.*)\\.json", category_file_name)[1].lower()
             labels.append(label)
@@ -311,9 +307,6 @@ The class `AmazonQADataLoader` takes over the above tasks of tarball extraction,
             texts.append(category_texts)
         print("Done!")
         return labels, texts
-    ...
-self.data = {"y": labels, "X": texts}   ## data loader "data" attribute 
-
 ```
 
 The extracted text is saved in the data loader "data" attribute. This data is then used to initialize instances of *`DataProvider`* class as needed. The `DataProvider` works on the underlying total extracted dataset, and does the following:
@@ -359,11 +352,11 @@ The extracted text is saved in the data loader "data" attribute. This data is th
 | lrg-3000    | 3000              | 1000                | 100           |
 | lrg-12k     | 12000             | 4000                | 100           |
 | lrg-30k     | 30000             | 10000               | 100           |
-| full        | ~150k             | ~50k                | 100           |
+| full        | ~110k             | ~50k                | 100           |
 
 
 
-- ensures that the **provided samples are balanced** across the target classes. Balanced classes are important so as to not skew the accuracy score of the classifier.  Balanced classes have the effect of giving the classifiers no a-priori reason for preferring one class over the other. As there is much more data available in the dataset than needed for training/fine-tuning, creating balanced sample datasets is relatively easy. 
+- ensures that the **provided samples are balanced across the target classes**. Balanced classes are important so as to not skew the accuracy score of the classifier.  Balanced classes have the effect of giving the classifiers no a-priori reason for preferring one class over the other. As there is much more data available in the dataset than needed for training/fine-tuning, creating balanced sample datasets is relatively easy. 
 
   ```python
       def _sample_from_data(self,data:dict,balance_classes = True):
@@ -397,11 +390,13 @@ https://github.com/google-research/bert
 
 The script `run_classifier.py`provides the boilerplate for implementing a custom classifier with BERT.  This code was cloned and added as a source dependency to the project.  
 
-For ULMFiT, the [fastai](https://docs.fast.ai/text.html)  wrapper for ulmfit was used.
+For ULMFiT, the [fastai](https://docs.fast.ai/text.html)  wrapper for ULMFiT was used.
 
- 
+https://docs.fast.ai/text.html  
 
-The goal of the analysis and design was to produce a suite of classes, interfaces, and implementations that would provide the functionality of evaluating all three classifiers (baseline, ULMFiT, BERT) on the same set of dataset samples, and record the results. I wanted to do this in a way that provided a consistent API, was manageable and readable, and had a minimum of "spaghetti code". 
+the `fastai` library was added as a python dependency with pip.
+
+The goal of the analysis and design was to produce a suite of classes, interfaces, and implementations that would provide the functionality of evaluating all three classifiers (baseline, ULMFiT, BERT) on the same set of dataset samples, and record the results. I wanted to do this in a way that provided a consistent API, was manageable and readable, and had a minimum of "spaghetti code", and encapsulated the complexities of the apis for BERT and ULMFiT.  
 
 A simplified UML of the primary classes and collaborators is as follows:
 
@@ -438,11 +433,11 @@ bert_session.persist()
 
 ```
 
-
+The above example is for BERT, the ULMFiT and Baseline implementations follow the same pattern. 
 
 ##### A note on text preprocessing
 
-The text data provided by the `DataProvider` class are not yet fully preprocessed for the estimators. Much text preprocessing happens "under the hood" and is initiated by the calls to train, evaluate, predict respectively. 
+The text data provided by the `DataProvider` class are not yet fully preprocessed for the estimators. Much text preprocessing happens "under the hood", is implementation specific,  and is initiated by the calls to train, evaluate, predict respectively. 
 
 The baseline estimator uses the default tokenization and normalization provided by `scikit-learn` `TfIdfVectorizer` with the exception that unigrams and bigrams are used (`ngram_range(1,2)`). The relevant part of that configuration is reproduced here:
 
@@ -476,7 +471,7 @@ The BERT estimator uses the BERT-internal `FullTokenizer`. This tokenizer conver
 
 ```
 
-Text preprocessing for ULMFiT takes place when creating a `TextDataBunch` object - part of the `fastai` api for ulmfit. 
+Text preprocessing for ULMFiT takes place when creating a `TextDataBunch` object
 
 ```python
 ## create text bunches out of label, text dataframes. 
@@ -538,11 +533,25 @@ BERT_BASE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-12_H-768_A-12"
 
 The BERT Base model utilizes a Transformer architecture with 12-layers of size 768 each, 12 attention heads, and 110 million trainable parameters. It is pretrained on Wikipedia text.  
 
-TODO ULMFiT
+For ULMFiT, the primary hyperparameters to choose were
 
+* dropout factor - what proportion of the preconfigured dropout rate should be applied. Values of 0.5, 0.7, and 1 were tried. A value of 0.5 provided marginally better results than the others. 
 
+* learning rate - choosing an appropriate learning rate for the language model and classifier models was accomplished by means of the `fastai lr_find`function, which mock-trains a model and then provides a scatterplot of the learning rates and losses. The scatterplot for the language model learner is as follows:
+
+  ![](C:\Projects\udacity-capstone\img\ulmfit_lm_lr.png)  
+
+  The ULMFiT team recommends choosing a learning rate around the middle of the downward curve, but not the lowest value. For this reason a learning rate of $1e-01$ was selected.
+
+  The scatterplot for the classifier learner is somewhat less interpretable:
+
+  ![](C:\Projects\udacity-capstone\img\ulmfit_clf_lr.png)   
+
+  Here, any learning rate before the loss starts to increase seems a plausible choice. A learning rate of $1e-03$ was chosen. 
 
 ### Refinement
+
+BERT
 
 Initially, the evaluation was run with the BERT large model. 
 
@@ -552,19 +561,118 @@ BERT_LARGE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-24_H-1024_A-16"
 
 This model has a deeper architecture with 340 million trainable parameters as opposed to the base model's 110 million. 
 
-It was found that running the large model often resulted in inconsistent evaluation and training results. Specifically, often the predicted class returned would be the same for all examples, resulting in an accuracy score of 10%, or exactly the score of a naive classifier. After extensive debugging, I was convinced this error was not in my code, but coming from BERT somewhere. Switching to the base model fixed the problem. 
+It was found that running the large model often resulted in inconsistent evaluation and training results. Specifically, often the predicted class returned during evaluation would be the same for all examples, resulting in an accuracy score of 10%, or exactly the score of a naive classifier. After extensive debugging, I was convinced this error was not in my code, but coming from BERT somewhere. Switching to the base model fixed the problem, and consistent results could be acquired. 
+
+ULMFiT
+
+A challenge for ULMFiT was in implementing *discriminative fine tuning* and *gradual unfreezing* as described above and in the original ULMFiT paper. Introductory tutorials and quick start guides for ULMFiT do not provide any indication if this functionality is implemented under the hood, or if it must be implemented extra in client code. It turns out, one must dig a little deeper in the documentation and api to find the answers.  
+
+*discriminative fine-tuning*
+
+Discriminative fine-tuning is implemented by providing a list of learning rates to the fit method of the learner. The list needs to be of the same length as the number of layers in the model. To simplify this, the method `lr_range` is provided by the `fastai` api, which provides such a list based on start and end values:
+
+```python
+lrr = self.lm_learn.lr_range(slice(1e-1, 1e-3))
+```
+
+*Gradual unfreezing*
+
+Gradual unfreezing must be implemented by client code. There is no method or flag in the wrapper code which automatically activates this feature. This is a bit of a surprise, as this feature is one of the central innovations of ULMFiT. Be that as it may, the ULMFiT paper recommends starting with the top layer, training for one epoch, and then incrementally working ones way down before starting over again for as many epochs as one wishes to train. This functionality is partially realized with the `freeze` and `freeze_to` methods.  The implementation in my code for the `train()` method of the language model learner is reproduced here:
+
+```python
+## learn using discriminative training and gradual unfreezing
+numlayers = len(self.lm_learn.layer_groups)
+print("lm learner has {} layers ",numlayers)
+stop = 0-(numlayers)
+## 1e-1 previously found as acceptable learning rate with learn.lr_find
+## lr_range creates learning rates for each layer (discriminative training)
+lrr = self.lm_learn.lr_range(slice(1e-1, 1e-3))
+for i in range(self.epoch1):
+    print("Training for Epoch ",i+1)
+    self.lm_learn.freeze()
+    ## now start layer unfreezing
+    ##only last layer trainable
+    self.lm_learn.fit_one_cycle(1,lrr)
+    layer_num_inverted = -2 ## not second layer, but second from last
+    ## train next layers
+    while layer_num_inverted > -numlayers:
+        print("freeze to ",layer_num_inverted)
+        self.lm_learn.freeze_to(layer_num_inverted)
+        self.lm_learn.fit_one_cycle(1, lrr)
+        layer_num_inverted = layer_num_inverted-1
+```
+
+Implementing discriminative fine-tuning and (especially) gradual unfreezing improved ULMFiT performance by an average of several percent points (accuracy) compared to an initial naive implementation (following quick-start guides).
 
 ## IV. Results
 
 ### Model Evaluation 
 
+Without any further ado,  I present the accuracy results for each classifier, and each sample in the total dataset. 
+
+![](C:\Projects\udacity-capstone\img\results.png) 
+
+![](C:\Projects\udacity-capstone\img\results_table.PNG) 
+
+The accuracy results reflect the score on the "evaluation" held-out data for each sample, which was consistently 1/3 of the training set size. 
+
+We can immediately make the following conclusions:
+
+* ULMFiT performed poorly, barely better than a naive classifier on small data. This is surprising and disappointing, particularly because the ULMFiT authors report that ULMFiT performs well on small data on an IMDB sentiment analysis dataset. It does not appear as if ULMFiT was able to learn useful abstractions which would enable it to generalize well to new examples. 
+* BERT is the strongest classifier in this evaluation, but less so than the others with larger data, where the performance of the 3 is comparable
+* The best accuracy score in this evaluation was 75%. This was obtained by the BERT classifier on the full dataset with ~110k training examples. 
+* BERT is particularly strong on small and medium data (150-1500 training examples), precisely the samples of interest in this evaluation. In this range, BERT consistently outperforms the baseline estimator by more than 1/3, on the "small-450" sample BERT performs almost 2x as well as the baseline. 
+* BERT reaches an accuracy of 50% with only 450 training examples. The baseline needs 3000 training examples to reach 50%, and ulmfit still more. BERT reaches 50 and 60% accuracy with ~10x less training data than is required for the other classifiers. 
+
+As noted above, the best classifier accuracy achieved was ~75% on the full dataset. This indicates that about 25% of the examples of the dataset might have insufficient information content or be too ambiguous to be clearly classified at all. In order to examine some of the challenges and ambiguities of this data, it is useful to examine some of the examples the strongest classifier failed to classify correctly. On a test dataset of 100 examples, the BERT-full classifier missed only 11 examples (89% accuracy on the test dataset!). Those examples are shown below
+
+![](C:\Projects\udacity-capstone\img\bert_pred_full_wrong.PNG) 
+
+Text such as "what is the weight limit" or "is the center a clear liquid" are pretty ambiguous. Additionally, some predictions that BERT made seem more plausible than the true label (see the last two texts for example).  
+
+It seems as if BERT is learning to generalize by using abstractions learned through a modest amount of training data, abstractions that are more powerful than simply the presence or absence of lexical word forms. In order to determine if this is indeed the case, an closer examination of some of the specific predictions BERT made is needed. 
+
+On a test set of 100 examples, the BERT classifier trained on the `small-450` sample had a 52% accuracy. Some of the correctly guessed examples are:
+
+![](C:\Projects\udacity-capstone\img\bert_450_pred_true_sample.PNG) 
+
+
+
+One of the questions posed by this evaluation is, ***can pretrained language models infer using out-of-vocabulary words (with respect to the fine-tuning training set)***. In order to provide some insight to this question, it is useful to examine correctly guessed instances such as those above, and examine if presumably high-information words such as "Guinea" and "pig" (for the class pet_supplies) were present in the training data. If not, it is reasonable to conclude that the correct classification of a text was due to transfer learning and not the presence of a lexical word in the training data. 
+
+*  ***"is it large enough for Guinea pig"*** Correctly classified as "pet_supplies" with 75% confidence. 
+
+  * Neither "Guinea" nor "pig" was present in the training data for the dataset small-450
+
+* ***"do any of the under armours come with a fly you can open"*** Correctly classified as "clothing_shoes_and_jewelry" ( 48% confidence, followed by "arts_crafts_sewing" with 26% confidence)
+
+  * neither "armours" nor "fly" were present in the training data. How could BERT have inferred the category "clothing" from a sentence "do any of the under xxx come with a xxx you can open"? *Here it seems an intriguing possibility that BERT has learned a feature for "opening a fly" (as opposed to swatting a fly), and applied this to the input text*, although "fly" was not present in the training data. This might be an instance of transfer learning ("fly" not in training data) and word sense disambiguation through context ("fly you can open" is different than "fly you can swat").  Furthermore, the other words which might be a hint for "clothing" - "under" and "open" are not at all exclusive to the clothing category. Below is a listing for every category every time the words "under" and "open" appear in the training data. They appear not that often, and in several categories. 
+
+    ![1547929697456](C:\Users\loutzenj\AppData\Roaming\Typora\typora-user-images\1547929697456.png)  
+
+* **"yes that is the point of it I believe, I have made gobs of ruffles with it"** Correctly classified as "arts_crafts_and_sewing" (with only 26%, almost evenly split with "clothing" at 25% confidence).  
+
+  * neither "gobs" nor "ruffles" were present in the training data. 
+
 
 
 ## V. Conclusion
-_(approx. 1-2 pages)_
+![](C:\Projects\udacity-capstone\img\reduced_results.png)  
 
-### Free-Form Visualization
+The histogram above helps focus our attention on the primary positive finding from this evaluation which is that ***BERT outperforms the baseline significantly on small datasets***. 
+
+The conclusion to be drawn is that yes, pretrained language models have the potential to help us bootstrap NLP applications such as chatbots when only small training datasets are available by leveraging transfer learning, however this statement has two very large caveats:
+
+* Pretraining on a large corpus and fine-tuning is in and of itself no guarantee of improved performance. The many, details of implementation, pretraining and fine-tuning can make the difference between success and failure. For some reason, ULMFiT performed very badly although the principles of pretraining and fine-tuning are the same. 
+* Transfer learning using deep neural models is a technique that is many orders of magnitude more complex than "traditional" techniques like the baseline used here in terms of
+  * **time** - pretraining these models can take days and even weeks, whereas training the baseline on the 110k full dataset took less than two minutes. Of course pretraining is not something that is done often, maybe never by users of the models, however even fine-tuning the BERT and ULMFiT models for each of the sample datasets takes several hours (on big machines, see below), whereas the baseline classifier is done in around two minutes on my commodity business laptop. 
+  * **computational power** - the several hours mentioned above for fine-tuning BERT (ULMFiT took also several hours) is the time it took for training on *expensive cloud-hosted machines fitted with multiple tpu accelerators or gpus*. The baseline classifier with Naive Bayes requires no special computing power. 
+  * **code/api complexity**- using a Naive Bayes from scikit-learn to achieve the baseline results above involves a handful of lines of code. The scikit learn code is also well-documented easy to use and understand, and works as expected with an absolute minimum of "going under the hood". Understanding and using the code for BERT and especially ULMFiT was a real challenge. I have around 20 years experience as a coder, but found finding the correct documentation and actually working with the code to be an at times frustrating experience of trail-and-error and unpleasant surprises. With ULMFiT, because the results were as poor as they were, I have the nagging feeling I may have used the API wrong or forgotten some key detail, however nothing was apparent even after long and repeated research and trail and error. 
+
+These practical considerations, while not the primary focus of this evaluation, weigh heavily in the chose of technology in a practical application. At the moment, although BERT did deliver some surprising and interesting results, it would be impractical and prohibitive in terms of time, cost, and effort to actually incorporate BERT into a real-world chatbot project. The results of this evaluation would therefore unfortunately have to temper the enthusiasm of the claim that NLPs "Imagenet Moment" had indeed arrived. 
+
 ### Reflection
+
 ### Improvement
 
 ### References
@@ -590,6 +698,4 @@ _(approx. 1-2 pages)_
 [Merity et al. 2017b]: https://www.salesforce.com/products/einstein/ai-research/the-wikitext-dependency-language-modeling-dataset/
 [Vaswani et al.]: https://arxiv.org/abs/1706.03762 "Attention is all you need"
 [ fastai ulmfit wrapper]: https://docs.fast.ai/text.html "fastai documentation for ulmfit"
-
-
 

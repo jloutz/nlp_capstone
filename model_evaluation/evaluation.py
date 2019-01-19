@@ -111,6 +111,36 @@ class Results:
         plt.show()
 
 
+    @classmethod
+    def show_reduced_results_hist(cls,df,session_names=('small-150','small-300','small-450','small-600','med-900','med-1500')):
+        import matplotlib.pyplot as plt
+        import numpy as np
+        scores = cls.get_max_scores(df)
+        base_eval=scores[0].eval_score[:6]
+        bert_eval=scores[1].eval_score[:6]
+        #ulmfit_eval = scores[2].eval_score
+
+        ind = np.arange(len(base_eval))  # the x locations for the groupsnp.arange(
+        width = 0.25  # the width of the bars
+
+        fig, ax = plt.subplots()
+        rects3 = ax.bar(ind + width, bert_eval, width,
+                        color='steelblue', label='BERT')
+        rects2 = ax.bar(ind, base_eval, width,
+                        color='IndianRed', label='Baseline')
+
+        # Add some text for labels, title and custom x-axis tick labels, etc.
+        ax.set_ylabel('Accuracy')
+        ax.set_title('Accuracy Scores by Dataset and Estimator')
+        ax.set_xticks(ind)
+        ax.set_xticklabels(session_names,rotation=45)
+
+        ax.legend()
+
+        plt.show()
+
+
+
 from data_preparation import DataProvider
 def load_datasets_for_evaluation(dir=LOCAL_DATASETS_DIR,name="datasets_for_eval.pkl"):
     loadpath = os.path.join(dir,name)
@@ -119,6 +149,8 @@ def load_datasets_for_evaluation(dir=LOCAL_DATASETS_DIR,name="datasets_for_eval.
     print("Done!")
     return datasets
 
+
+RESULTS_DF_PATH = "C:\Projects/udacity-capstone/results/resultsdf.pkl"
 
 def load_and_show_results(filepath):
     res_df = joblib.load(filepath)
