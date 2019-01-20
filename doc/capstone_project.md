@@ -573,6 +573,12 @@ Implementing discriminative fine-tuning and (especially) gradual unfreezing impr
 
 
 
+
+
+
+
+
+
 ## IV. Results
 
 ### Model Evaluation 
@@ -661,6 +667,46 @@ It seems as if BERT is indeed successfully leveraging transfer learning to achie
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## V. Conclusion
 ![](C:\Projects\udacity-capstone\img\reduced_results.png)  
 
@@ -705,25 +751,44 @@ The most salient negative result of this evaluation was the poor performance of 
 
 ### References
 
-[Giorgino 2004]: https://pdfs.semanticscholar.org/99e1/3b7ac59b3b82956b26fb5fb964b2c69f4338.pdf	"An Introduction to Text Classification"
-[Wang and Manning 2012]: https://www.aclweb.org/anthology/P12-2018	" "Baselines and Bigrams: Simple, Good Sentiment and Topic Classification""
-[ULMFiT]: https://arxiv.org/abs/1801.06146
-[Elmo]: https://allennlp.org/elmo
-[Peters et al. 2018]: https://arxiv.org/abs/1802.05365	"Deep contextualized word representations"
-[BERT]: https://github.com/google-research/bert
-[Howard and Ruder 2018]: https://arxiv.org/pdf/1801.06146.pdf "Universal Language Model Fine-tuning for Text Classification"
-[Devlin et al. 2018]: https://arxiv.org/pdf/1810.04805.pdf	"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding"
-[NLPs-Imagenet-Moment]: https://thegradient.pub/nlp-imagenet/	"NLPs ImageNet Moment has Arrived"
-[amazon question/answer Dataset]: http://jmcauley.ucsd.edu/data/amazon/qa/
-[Wan and McAuley 2016]: http://cseweb.ucsd.edu/~jmcauley/pdfs/icdm16c.pdf	"Modeling ambiguity, subjectivity, and diverging viewpoints in opinion question answering systems"
-[McAuley and Yang 2016]: http://cseweb.ucsd.edu/~jmcauley/pdfs/www16b.pdf	"Addressing complex and subjective product-related queries with customer reviews"
-[Donahue et. al. 2013]: https://arxiv.org/abs/1310.1531	"DeCAF: A Deep Convolutional Activation Feature for Generic Visual Recognition"
-[Mikolov et. al. 2013]: https://arxiv.org/abs/1301.3781 " Efficient Estimation of Word Representations in Vector Space"
-[Pennington et. al]: https://nlp.stanford.edu/pubs/glove.pdf	"GloVe: Global Vectors for Word Representation"
-[Joulin et al. 2016]: https://arxiv.org/pdf/1607.01759.pdf   "Bag of Tricks for Efficient Text Classification"
-[GLUE]: https://gluebenchmark.com/tasks
-[Merity et al. 2017]: https://arxiv.org/abs/1708.02182 "Regularizing and Optimizing LSTM Language Models "
-[Merity et al. 2017b]: https://www.salesforce.com/products/einstein/ai-research/the-wikitext-dependency-language-modeling-dataset/
-[Vaswani et al.]: https://arxiv.org/abs/1706.03762 "Attention is all you need"
-[ fastai ulmfit wrapper]: https://docs.fast.ai/text.html "fastai documentation for ulmfit"
+Giorgino 2004 :  https://pdfs.semanticscholar.org/99e1/3b7ac59b3b82956b26fb5fb964b2c69f4338.pdf	"An Introduction to Text Classification"
+
+Wang and Manning 2012  https://www.aclweb.org/anthology/P12-2018	" "Baselines and Bigrams: Simple, Good Sentiment and Topic Classification""
+
+ULMFiT: https://arxiv.org/abs/1801.06146
+
+Elmo: https://allennlp.org/elmo
+
+Peters et al. 2018: https://arxiv.org/abs/1802.05365	"Deep contextualized word representations"
+
+BERT: https://github.com/google-research/bert
+
+Howard and Ruder 2018: https://arxiv.org/pdf/1801.06146.pdf "Universal Language Model Fine-tuning for Text Classification"
+
+Devlin et al. 2018: https://arxiv.org/pdf/1810.04805.pdf	"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding"
+
+NLPs-Imagenet-Moment: https://thegradient.pub/nlp-imagenet/	"NLPs ImageNet Moment has Arrived"
+amazon question/answer Dataset: http://jmcauley.ucsd.edu/data/amazon/qa/
+
+Wan and McAuley 2016: http://cseweb.ucsd.edu/~jmcauley/pdfs/icdm16c.pdf	"Modeling ambiguity, subjectivity, and diverging viewpoints in opinion question answering systems"
+
+McAuley and Yang 2016: http://cseweb.ucsd.edu/~jmcauley/pdfs/www16b.pdf	"Addressing complex and subjective product-related queries with customer reviews"
+
+Donahue et. al. 2013: https://arxiv.org/abs/1310.1531	"DeCAF: A Deep Convolutional Activation Feature for Generic Visual Recognition"
+
+Mikolov et. al. 2013: https://arxiv.org/abs/1301.3781 " Efficient Estimation of Word Representations in Vector Space"
+
+Pennington et. al: https://nlp.stanford.edu/pubs/glove.pdf	"GloVe: Global Vectors for Word Representation"
+
+Joulin et al. 2016: https://arxiv.org/pdf/1607.01759.pdf   "Bag of Tricks for Efficient Text Classification"
+
+GLUE: https://gluebenchmark.com/tasks
+
+Merity et al. 2017: https://arxiv.org/abs/1708.02182 "Regularizing and Optimizing LSTM Language Models "
+
+Merity et al. 2017b: https://www.salesforce.com/products/einstein/ai-research/the-wikitext-dependency-language-modeling-dataset/
+
+Vaswani et al.: https://arxiv.org/abs/1706.03762 "Attention is all you need"
+
+fastai ulmfit wrapper: https://docs.fast.ai/text.html "fastai documentation for ulmfit"
 
