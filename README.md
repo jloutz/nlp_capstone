@@ -1,5 +1,5 @@
 ### Evaluation of pretrained language models for short text classification and small datasets
-To read about what this is, see the written report in the *doc* folder. 
+To read about what this is, see the written report capstone_project.pdf 
 
 This project is structured as follows:
 
