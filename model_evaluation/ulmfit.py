@@ -149,16 +149,15 @@ class ULMFiTSession(Session):
 ####################### run ulmfit evaluaton #######################################
 import config
 def _load_datasets_for_evaluation(dir=config.GCP_LOCAL_DATASETS_DIR,name="datasets_for_eval.pkl"):
-    ## here using open and pickle to avoid tensorflow and sklearn dependencies.
-    ## might not work with gcp bucket storage
     import os
-    import pickle
-    loadpath = os.path.join(dir,name)
+    from sklearn.externals import joblib
+    from data_preparation import DataProvider
+    loadpath = os.path.join(dir, name)
     print("Loading {}...".format(loadpath))
-    with open(loadpath,'rb') as f:
-        datasets = pickle.load(f)
+    datasets = joblib.load(loadpath)
     print("Done!")
     return datasets
+
 
 def init_sessions(white_list='med-900'):
     ## method to get sessions without running eval if needed for debug/exploration
