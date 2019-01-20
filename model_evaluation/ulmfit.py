@@ -191,6 +191,6 @@ def run_evaluation_ulmfit(datasets_dir=config.GCP_LOCAL_DATASETS_DIR,
         session.train()
         session.evaluate()
         #print(session.evaluation_results[2])
-        session.predict()
+        #session.predict()
         session.persist(output_dir=output_dir)
 

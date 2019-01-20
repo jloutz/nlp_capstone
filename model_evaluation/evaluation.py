@@ -63,19 +63,20 @@ class Results:
                 pred, true = session["evaluation_results"]
                 eval_score =  len([pred[i] for i in range(len(pred)) if pred[i]==true[i]])/len(pred)
             datarow.append(eval_score)
-            if session["estimator_type"] == "ulmfit":
-                ulm_preds = session["prediction_results"]
-                pred = ulm_preds[0]
-                true = ulm_preds[1]
-                correct = 0
-                for i in range(len(pred)):
-                    if pred[i]==true[i]:
-                        correct+=correct
-                pred_score =correct/len(pred)
-            else:
-                pred_df = session["prediction_results"]
-                pred_score = len(pred_df[pred_df["true"]==pred_df["pred"]])/len(pred_df)
-            datarow.append(pred_score)
+            if "prediction_results" in session:
+                if session["estimator_type"] == "ulmfit":
+                    ulm_preds = session["prediction_results"]
+                    pred = ulm_preds[0]
+                    true = ulm_preds[1]
+                    correct = 0
+                    for i in range(len(pred)):
+                        if pred[i]==true[i]:
+                            correct+=correct
+                    pred_score =correct/len(pred)
+                else:
+                    pred_df = session["prediction_results"]
+                    pred_score = len(pred_df[pred_df["true"]==pred_df["pred"]])/len(pred_df)
+                datarow.append(pred_score)
             data.append(datarow)
         res_df = pd.DataFrame(data,row_index,cols)
         return res_df
@@ -103,7 +104,7 @@ class Results:
         return (baseres, bertres, ulmres)
 
     @classmethod
-    def show_results_hist(cls,df,session_names,mean_or_max='max'):
+    def show_results_hist(cls,df,session_names,mean_or_max='max',with_ulm=False):
         import matplotlib.pyplot as plt
         import numpy as np
         scores = None
@@ -115,13 +116,15 @@ class Results:
             raise Exception("check min or max param")
         base_eval=scores[0].eval_score
         bert_eval=scores[1].eval_score
-        ulmfit_eval = scores[2].eval_score
+        if with_ulm:
+            ulmfit_eval = scores[2].eval_score
 
         ind = np.arange(len(base_eval))  # the x locations for the groupsnp.arange(
         width = 0.25  # the width of the bars
 
         fig, ax = plt.subplots()
-        rects1 = ax.bar(ind - width, ulmfit_eval, width,
+        if with_ulm:
+            rects1 = ax.bar(ind - width, ulmfit_eval, width,
                         color='lightslategray', label='ULMFiT')
 
         rects3 = ax.bar(ind + width, bert_eval, width,
@@ -209,3 +212,4 @@ def results_table_from_results_df(filepath=config.RESULTS_DF_PATH,mean_or_max='m
 
 
 
+#res = Results(sessions_dir=config.LOCAL_RESULTS_DIR+"/small_sessions",session_names=config.DATASET_SAMPLE_NAMES[:6])
