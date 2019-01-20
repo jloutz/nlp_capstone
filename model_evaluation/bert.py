@@ -394,7 +394,7 @@ def setup_estimator_test():
 
 
 ################## run bert evaluation ###########################
-def load_datasets_for_evaluation(dir=config.GCP_DATASETS_DIR,name="datasets_for_eval.pkl"):
+def _load_datasets_for_evaluation(dir=config.GCP_DATASETS_DIR,name="datasets_for_eval.pkl"):
     import os
     from sklearn.externals import joblib
     loadpath = os.path.join(dir, name)
