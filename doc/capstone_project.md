@@ -1,15 +1,13 @@
 # Machine Learning Engineer Nanodegree
 ## Capstone Project
 John Loutzenhiser
-January 6, 2019
+January 20, 2019
 
-## Evaluating Pretrained Language Models for Short Text Classification
+## Evaluating Pretrained Language Models for Short Text Classification on Small Datasets
 
 
 
 ## I. Definition
-_(approx. 1-2 pages)_
-
 ### Project Overview
 Text classification is a well-studied and widely used practical application of machine learning technologies ([Giorgino 2004][] ). In a text classification task, one starts with a corpus of documents or texts which have been categorized or labeled according to some criteria. This pre-categorized corpus is used as training data to train a machine learning model which is then able to predict the category or class of new, unseen documents. 
 
@@ -66,15 +64,15 @@ In order to answer these questions, an evaluation is proposed where two modern p
 
 * Using a supervised learning paradigm, train 3 text classifiers using training data in the dataset. The 3 classifiers are based on the following implementations:
 
-  * tfidf weighted word-grams fed into a Naive Bayes Classifier. This implementation is based on scikit-learn, and represents a widely-used and strong baseline implementation for comparison
-  * BERT - implementation based on the open-source release available at https://github.com/google-research/bert
-  * ULMFiT - implementation based on the open source release found at https://github.com/fastai/fastai
+  * **TF-IDF weighted word-grams fed into a Naive Bayes Classifier**. This implementation is based on scikit-learn, and represents a widely-used and strong baseline implementation for comparison
+  * **BERT** - implementation based on the open-source release available at https://github.com/google-research/bert
+  * **ULMFiT** - implementation based on the open source release found at https://github.com/fastai/fastai
 
 * Each classifier is trained (or fine-tuned) on samples out of the total dataset of various sizes. The focus is on small samples, to simulate the situation of bootstrapping a chatbot from scratch, and to test the hypothesis that pretrained language models might indeed require less training (fine-tuning) than other classifiers to achieve similar or better results.   
 
 * Evaluate the performance of each classifier on training or holdout data in each dataset sample using the accuracy metric (percent of correctly classified texts).
 
-* Examine a confusion matrix of classification results for each dataset sample in order to determine to what extent pretrained language models were indeed able to "infer" the correct class in cases where training features were not present in the input sample (out-of-vocabulary)  
+* Examine the classification results more closely in order to determine to what extent pretrained language models were indeed able to "infer" the correct class in cases where training features were not present in the input sample (out-of-vocabulary)  
 
 
 ### Metrics
@@ -91,11 +89,10 @@ where:
 - fp = false positives - for a class, number of instances incorrectly predicted as belonging to that class
 - fn = false negatives - for a particular class, number of instances actually belonging to the class which were incorrectly predicted as not belonging to that class
 
-As this is a multiclass classification problem, a [confusion matrix](https://en.wikipedia.org/wiki/Confusion_matrix)  will also be useful to allow for more detailed analysis of tp, tn, fp, and fn.  
-
 
 
 ## II. Analysis
+
 ### Data Exploration
 
 For this evaluation I used the [amazon question/answer dataset][]. ([Wan and McAuley 2016][]), ([McAuley and Yan 2016][]) This dataset contains around 1.4 million relatively short question/answer pairs taken from amazon product reviews. This dataset is an excellent dataset for this evaluation, because:
@@ -622,7 +619,7 @@ We can immediately make the following conclusions:
 * BERT is the strongest classifier in this evaluation, but less so than the others with larger data, where the performance of the 3 is comparable
 * The best accuracy score in this evaluation was 75%. This was obtained by the BERT classifier on the full dataset with ~110k training examples. 
 * BERT is particularly strong on small and medium data (150-1500 training examples), precisely the samples of interest in this evaluation. In this range, BERT consistently outperforms the baseline estimator by more than 1/3, on the "small-450" sample BERT performs almost 2x as well as the baseline. 
-* BERT reaches an accuracy of 50% with only 450 training examples. The baseline needs 3000 training examples to reach 50%, and ulmfit still more. BERT reaches 50 and 60% accuracy with ~10x less training data than is required for the other classifiers. 
+* BERT reaches an accuracy of 50% with only 450 training examples. The baseline needs 3000 training examples to reach 50%, and ULMFiT still more. BERT reaches 50 and 60% accuracy with ~10x less training data than is required for the other classifiers. 
 
 As noted above, the best classifier accuracy achieved was ~75% on the full dataset. This indicates that about 25% of the examples of the dataset might have insufficient information content or be too ambiguous to be clearly classified at all. In order to examine some of the challenges and ambiguities of this data, it is useful to examine some of the examples the strongest classifier failed to classify correctly. On a test dataset of 100 examples, the BERT-full classifier missed only 11 examples (89% accuracy on the test dataset!). Those examples are shown below
 

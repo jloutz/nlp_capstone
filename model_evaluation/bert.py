@@ -2,36 +2,44 @@ import uuid
 import numpy
 import os
 import pandas
+## model-evaluation dependencies
+import config
+import data_preparation as data_preparation
+import evaluation
+from base import Estimator, Session
 
-
+## bert dependencies
 import modeling
 import tokenization
 import tensorflow as tf
-
-import data_preparation as data_preparation
-import evaluation
-from base import Estimator, Session, BaselineEstimator
-
 from run_classifier import InputExample,\
     file_based_input_fn_builder,\
     file_based_convert_examples_to_features,\
     PaddingInputExample, \
     model_fn_builder
 
+
 """
 code here is largely an object-oriented rework of the code 
 in bert-master run_classifier. I can't help it, it is how my brain works. 
+
+particularly the really important code parts in train, evaluate, and predict are lifted
+directly from the bert implementation in run_classifier
+
+IMPORTANT: this code relies on the bert-master code available at 
+https://github.com/google-research/bert
+clone that repo and add it to the project source path (PYTHONPATH or sys.path) before trying this code.
 """
 
 class BertEstimatorConfig:
-
+    ### contains config and hyperparametes for bert estimator
     def __init__(self,
                  bert_pretrained_dir,
                  output_dir ,
                  use_tpu = True,
                  tpu_name = None
                  ):
-
+        ### much of the hyperparamters and comments here taken directly from bert-master code
         self.bert_config_file = os.path.join(bert_pretrained_dir, 'bert_config.json')
         self.vocab_file = os.path.join(bert_pretrained_dir, 'vocab.txt')
         "The output directory where the model checkpoints will be written."
@@ -75,7 +83,8 @@ class BertEstimatorConfig:
 
 class BertEstimator(Estimator):
     """
-    rework of bert-base run_classifier
+    Estimator subclass for bert
+    rework of bert-master run_classifier
     """
     def __init__(self,config:BertEstimatorConfig):
         """
@@ -332,6 +341,8 @@ class BertSession(Session):
 
 
     def persist(self,output_dir="gs://nlpcapstone_bucket/sessions/"):
+        ## persisting here makes use of tensorflow gfile, which can interface smoothly with
+        ## google cloud platform bucket storage
         import os
         import pickle
         tf.gfile.MakeDirs(output_dir)
@@ -362,12 +373,17 @@ class BertSession(Session):
         return super().__str__()
 
 
+BERT_BASE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-12_H-768_A-12"
+BERT_LARGE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-24_H-1024_A-16"
+
 def setup_estimator_test():
+    ## just a test if a session can be created
     loader_conf = data_preparation.AmazonQADataLoaderConfig(data_preparation.LOCAL_PROJECT_DIR)
     loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
     loader.load()
     config = BertEstimatorConfig(
-        bert_pretrained_dir="C:/Projects/udacity-capstone/data/uncased_L-12_H-768_A-12",
+        ## path to pretrained model here
+        bert_pretrained_dir=BERT_BASE_MODEL,
         output_dir="C:/Projects/udacity-capstone/output/bert/",
         use_tpu=False,
         tpu_name=None
@@ -377,89 +393,36 @@ def setup_estimator_test():
     session = BertSession(provider, estimator,name="setup_test")
 
 
-def run_bert_local():
-    loader_conf = data_preparation.AmazonQADataLoaderConfig("C:/Projects/udacity-capstone/")
-    loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
-    loader.load()
-    config = BertEstimatorConfig(
-        bert_pretrained_dir="C:/Projects/udacity-capstone/data/uncased_L-12_H-768_A-12",
-        output_dir="C:/Projects/udacity-capstone/output/bert/",
-        use_tpu=False,
-        tpu_name=None
-    )
-    estimator = BertEstimator(config)
-    very_small_data = data_preparation.DataProvider(200, 200, 20, loader.data)
-    small_data = data_preparation.DataProvider(3000, 100, 20, loader.data)
-    notso_small_data = data_preparation.DataProvider(30000, 10000, 20, loader.data)
-    full_data = data_preparation.DataProvider(0.7, 0.3, 100, loader.data)
+################## run bert evaluation ###########################
+def load_datasets_for_evaluation(dir=config.GCP_DATASETS_DIR,name="datasets_for_eval.pkl"):
+    ## use tensorflow gfile to access gcp bucket
+    from data_preparation import DataProvider
+    import pickle
+    loadpath = os.path.join(dir,name)
+    print("Loading {}...".format(loadpath))
+    with tf.gfile.GFile(loadpath, "rb") as f:
+        datasets = pickle.load(f)
+    print("Done!")
+    return datasets
 
-    very_small_session = BertSession(very_small_data, estimator,name="vs")
-    small_session = BertSession(small_data, estimator,name="s")
-    notso_small_session = BertSession(notso_small_data, estimator,name="nss")
-    full_session = BertSession(full_data, estimator,name="full")
-    for session in (very_small_session,small_session,notso_small_session,full_session):
-        print(session)
-        session.train()
-        session.evaluate()
-        session.predict()
-
-
-BERT_BASE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-12_H-768_A-12"
-BERT_LARGE_MODEL = "gs://cloud-tpu-checkpoints/bert/uncased_L-24_H-1024_A-16"
-
-def run_bert_tpu(datasets=None, testrun=False,loop=1):
-    loader_conf = data_preparation.AmazonQADataLoaderConfig("/home/jloutz67/nlp_capstone")
-    loader = data_preparation.AmazonQADataLoader(conf=loader_conf)
-    loader.load()
-    config = BertEstimatorConfig(
-        bert_pretrained_dir=BERT_BASE_MODEL,
-        output_dir="gs://nlpcapstone_bucket/output/bert/",
-        tpu_name=os.environ["TPU_NAME"]
-    )
-    bert_sessions = []
-    baseline_sessions = []
-
-    if datasets is None:
-        if testrun:
-            datasets = [("small-450",450,150,100)]
-        else:
-            datasets = [("lrg-3000",3000,1000,100),("med-900",900,300,100),("small-600",600,200,100),("small-450",450,150,100),("small-300",300,100,100),("small-150",150,50,100)]
-
-    for dataset in datasets:
-        for i in range(loop):
-            ##bert
-            bert_estimator=BertEstimator(config)
-            dp = data_preparation.DataProvider(loader.data, dataset[1], dataset[2], dataset[3])
-            bert_session = BertSession(dp, bert_estimator,name=dataset[0])
-            print(bert_session)
-            print()
-            bert_session.train()
-            bert_session.evaluate()
-            print(bert_session.evaluation_results)
-            bert_session.predict()
-            #print(bert_session.prediction_results)
-            bert_sessions.append(bert_session)
-            ## baseline
-            baseline_estimator = BaselineEstimator()
-            baseline_session = Session(dp,baseline_estimator,dataset[0])
-            print(baseline_session)
-            print()
-            baseline_session.train()
-            baseline_session.evaluate()
-            print(baseline_session.evaluation_results[2])
-            baseline_session.predict()
-            #print(baseline_session.prediction_results)
-            baseline_sessions.append(baseline_session)
-    return (bert_sessions,baseline_sessions)
-
-def run_evaluation_bert(datasets_dir=evaluation.GCP_DATASETS_DIR,output_dir = evaluation.GCP_SESSIONS_DIR, suffix="_1", white_list=None):
-    datasets = evaluation.load_datasets_for_evaluation(dir=datasets_dir)
+################# entry point for bert evaluation ################
+def run_evaluation_bert(datasets_dir=config.GCP_DATASETS_DIR,
+                        output_dir = config.GCP_SESSIONS_DIR,
+                        suffix="_1", white_list=None):
+    ## call this method to run an evaluation on a dataset using bert estimator
+    ## datasets_dir is the directory where the datasets prepared with data_preparation.prepare_datasets_for_eval
+    ## are saved. output_dir is dir where sessions (results) are saved
+    ## datasets_name is name of dataset pkl
+    ## suffix will be appended to session name - good for multiple runs with same dataset to avoid name collision.
+    ## white_list names of datasets ex. ['small-450','med-1500] to run. if none, runs all.
+    datasets = load_datasets_for_evaluation(dir=datasets_dir)
     for key,dataset in datasets.items():
         if white_list is not None and not key in white_list:
             continue
         print("*********** START "+key+suffix)
         config = BertEstimatorConfig(
             bert_pretrained_dir=BERT_BASE_MODEL,
+            ## output_dir is bert-internal output, not session results output
             output_dir="gs://nlpcapstone_bucket/output/bert/",
             tpu_name=os.environ["TPU_NAME"]
         )
@@ -471,9 +434,19 @@ def run_evaluation_bert(datasets_dir=evaluation.GCP_DATASETS_DIR,output_dir = ev
         session.predict()
         session.persist(output_dir=output_dir)
 
-def run_evaluations():
-    for run in range(1,4):
-        print("**********START run "+str(run))
-        run_evaluation_bert(suffix="_"+str(run))
 
+#### check for words in training data
+def check_training_data():
+    ### see report. some examples are examined if bert might really be using transfer learning.
+    ##  'high information' words are checked if they are present in training data for a few select examples
+    ##  see report for details
+    res = evaluation.Results()
+    bert_450_sess = [sess for sess in res.sessions if sess['name'].find('small-450-bert') > -1]
+    bert_450 = bert_450_sess[1]
+    test_texts =["Guinea pig","gobs ruffles","under armours fly open"]
+    for text in test_texts:
+        for example in bert_450['train_examples']:
+            for word in text.split():
+                if word in example.text_a.split():
+                    print(word, " ", example.label)
 

@@ -9,9 +9,19 @@ from base import Estimator, Session
 import pandas as pd
 import numpy as np
 
+"""
+Code here depends on the fastai api. and pytorch.  
+Add those dependencies to the project before using. 
+see https://docs.fast.ai/install.html
+I recommend a different venv for the ulmfit eval than that of the bert eval.  
+"""
 
 class ULMFiTEstimator(Estimator):
-    def __init__(self,epoch1=1,epoch2=5):
+    ### estimator for ulmfit
+    def __init__(self,epoch1=7,epoch2=7):
+        ### epoch1 is for model fine-tuning,
+        ### epoch2 is for classifier fine-tuning
+        ### recommended is 7,7 for this evaluation.
         self.pretrained_model=URLs.WT103_1
         self.drop_mult=0.5
         self.lm_learner = None
@@ -29,6 +39,7 @@ class ULMFiTEstimator(Estimator):
 
 
     def train(self, lmdata, clfdata):
+        ## fine-tune language model and classifier
         self.lm_learn = language_model_learner(lmdata,
                                                pretrained_model=self.pretrained_model,
                                                drop_mult=self.drop_mult)
@@ -100,6 +111,7 @@ class ULMFiTEstimator(Estimator):
 
 
 class ULMFiTSession(Session):
+    ## Session gets data from data provider, massages it a bit, and runs train, eval, predict.
     def __init__(self, data_provider: data_preparation.DataProvider, estimator: ULMFiTEstimator, name=""):
         super().__init__(data_provider, estimator, name)
         # make df out of X and y
@@ -131,12 +143,27 @@ class ULMFiTSession(Session):
         print("start predict")
         self.prediction_results = self.estimator.predict()
 
-DATASETS_DIR = "/home/jloutz67/nlp_capstone/data/suites"
-SESSIONS_DIR = "/home/jloutz67/nlp_capstone/results/sessions"
+
+
+
+####################### run ulmfit evaluaton #######################################
+import config
+def _load_datasets_for_evaluation(dir=config.GCP_LOCAL_DATASETS_DIR,name="datasets_for_eval.pkl"):
+    ## here using open and pickle to avoid tensorflow and sklearn dependencies.
+    ## might not work with gcp bucket storage
+    import os
+    import pickle
+    loadpath = os.path.join(dir,name)
+    print("Loading {}...".format(loadpath))
+    with open(loadpath,'rb') as f:
+        datasets = pickle.load(loadpath)
+    print("Done!")
+    return datasets
 
 def init_sessions(white_list='med-900'):
+    ## method to get sessions without running eval if needed for debug/exploration
     sessions = []
-    datasets = evaluation.load_datasets_for_evaluation(dir=DATASETS_DIR)
+    datasets = _load_datasets_for_evaluation()
     for key, dataset in datasets.items():
         if white_list is not None and not key in white_list:
             continue
@@ -146,10 +173,15 @@ def init_sessions(white_list='med-900'):
         sessions.append(session)
     return sessions
 
+######################## entry point for ulmfit eval #####################################################
 
-def run_evaluation_ulmfit(datasets_dir=DATASETS_DIR,output_dir = SESSIONS_DIR, suffix="_1",white_list=None,
+def run_evaluation_ulmfit(datasets_dir=config.GCP_LOCAL_DATASETS_DIR,
+                          datasets_name = "datasets_for_eval.pkl",
+                          output_dir = config.LOCAL_SESSIONS_DIR,
+                          suffix="_1",white_list=None,
                           epoch1=7,epoch2=7):
-    datasets = evaluation.load_datasets_for_evaluation(dir=datasets_dir)
+    ### epochs of 7,7 were found empirically to converge
+    datasets = _load_datasets_for_evaluation(dir=datasets_dir,name=datasets_name)
     for key,dataset in datasets.items():
         if white_list is not None and not key in white_list:
             continue
@@ -162,7 +194,3 @@ def run_evaluation_ulmfit(datasets_dir=DATASETS_DIR,output_dir = SESSIONS_DIR, s
         session.predict()
         session.persist(output_dir=output_dir)
 
-def ulmfit_results():
-    import evaluation
-    r = evaluation.Results()
-    return r

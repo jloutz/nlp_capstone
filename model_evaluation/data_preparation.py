@@ -17,8 +17,9 @@ class DataLoader():
     def load(self, lazy=True, persist=True):
         pass
 
-
+## my local project directory
 LOCAL_PROJECT_DIR = "C:/Projects/udacity-capstone"
+## my google cloud project directory
 GCP_PROJECT_DIR = "/home/jloutz67/nlp_capstone"
 
 class AmazonQADataLoaderConfig:
@@ -111,6 +112,7 @@ class DataProvider:
     """
     similar to DataProcessor in bert-base for preparing amazon qa data.
     provides data in a form expected from bert, ulmfit as well as sklearn classifiers.
+    Takes care of text length normalization and class balancing
     """
     def __init__(self,data:dict=None,train_size=0,eval_size=0, test_size=0):
         self.train_size = train_size
@@ -135,6 +137,7 @@ class DataProvider:
 
 
     def _data_len_stats(self, len_arr, quantile=90):
+        # generate and return statistics about text lengths
         from scipy import stats as st
         stats = {}
         nd_arr = np.array(len_arr)
@@ -251,6 +254,8 @@ class DataProvider:
 
 
     def _make_examples(self,samples,set_type):
+        # for bert - make_examples_fn passed in to avoid
+        # explicit dependency on bert packages
         if self.make_examples_fn is None:
             raise NotImplementedError()
         return self.make_examples_fn(samples,set_type)
@@ -296,6 +301,7 @@ class DataProvider:
 
 ######### data exploration ##########
 def load_provider_local():
+    ## load a data provider with all text data
     proj_dir = LOCAL_PROJECT_DIR
     ## put it all together
     conf = AmazonQADataLoaderConfig(proj_dir)
@@ -307,6 +313,7 @@ def load_provider_local():
 
 
 def text_len_hist(len_arr):
+    ## show a histogram based on an array of text lengths
     import matplotlib.pyplot as plt
     plt.hist(len_arr, bins=1000)
     plt.xlabel("text length (words)")
@@ -314,6 +321,7 @@ def text_len_hist(len_arr):
     return plt
 
 def explore_data():
+    ## this method is used to show text length stats and histograms
     provider = load_provider_local()
     stats = provider.data_stats
     print("original data stats")
@@ -324,8 +332,40 @@ def explore_data():
     plt2 = text_len_hist(stats[1]['len_arr'])
     return (plt,plt2)
 
-### dataset preparation
-def prepare_datasets_for_eval():
+def prepare_datasets_for_eval(dataset_defs):
+    ## use this method to prepare datasets (wrapped by data provider)
+    ## which can then be used for evaluations.
+    ## save the result to a directory, provide this directory as "datasets_dir" parameter to
+    ## one of the run_evaluation_* methods (for example, base.run_evaluation_baseline).
+    ## see base.run_evaluation_baseline
+    ## see bert.run_evaluation_bert
+    ## see ulmfit.run_evaluation_ulmfit
+    ## The same set of datasets should be used for one evaluation trail.
+    ## param dataset_defs is array of tuples of the form
+    ## ('name',train_data_size,eval_data_size,test_data_size) ex.
+    ##dataset_defs = [("full",.67,.33,100),
+    #            ("lrg-30k",30000,10000,100),
+    #            ("lrg-12k",12000,4000,100),
+    #            ("lrg-3000",3000,1000,100),
+    #            ("med-1500",1500,500,100),
+    #            ("med-900",900,300,100),
+    #            ("small-600",600,200,100),
+    #            ("small-450",450,150,100),
+    #            ("small-300",300,100,100),
+    #            ("small-150",150,50,100)]
+
+    conf = AmazonQADataLoaderConfig(LOCAL_PROJECT_DIR)
+    loader = AmazonQADataLoader(conf=conf)
+    loader.load()
+    providers = {}
+    for ds in dataset_defs:
+        dp = DataProvider(loader.data, ds[1],ds[2],ds[3])
+        providers[ds[0]]=dp
+    return providers
+
+def prepare_full_datasets_for_eval():
+    ## use this method to prepare a full dataset (wrapped by data provider)
+    ## which can then be used for evaluations.
     datasets = [("full",.67,.33,100),
                 ("lrg-30k",30000,10000,100),
                 ("lrg-12k",12000,4000,100),
@@ -336,15 +376,19 @@ def prepare_datasets_for_eval():
                 ("small-450",450,150,100),
                 ("small-300",300,100,100),
                 ("small-150",150,50,100)]
+    return prepare_datasets_for_eval(datasets)
 
-    conf = AmazonQADataLoaderConfig(LOCAL_PROJECT_DIR)
-    loader = AmazonQADataLoader(conf=conf)
-    loader.load()
-    providers = {}
-    for ds in datasets:
-        dp = DataProvider(loader.data, ds[1],ds[2],ds[3])
-        providers[ds[0]]=dp
-    return providers
+
+def prepare_small_datasets_for_eval():
+    ## use this method to prepare a partial dataset of small and medium data
+    ## which can then be used for evaluations.
+    datasets = [("med-1500",1500,500,100),
+                ("med-900",900,300,100),
+                ("small-600",600,200,100),
+                ("small-450",450,150,100),
+                ("small-300",300,100,100),
+                ("small-150",150,50,100)]
+    return prepare_datasets_for_eval(datasets)
 
 
 
