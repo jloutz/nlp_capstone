@@ -400,7 +400,7 @@ def load_datasets_for_evaluation(dir=config.GCP_DATASETS_DIR,name="datasets_for_
     import pickle
     loadpath = os.path.join(dir,name)
     print("Loading {}...".format(loadpath))
-    with tf.gfile.GFile(loadpath) as f:
+    with tf.gfile.GFile(loadpath, "rb") as f:
         datasets = pickle.load(f)
     print("Done!")
     return datasets
