@@ -395,15 +395,14 @@ def setup_estimator_test():
 
 ################## run bert evaluation ###########################
 def load_datasets_for_evaluation(dir=config.GCP_DATASETS_DIR,name="datasets_for_eval.pkl"):
-    ## use tensorflow gfile to access gcp bucket
-    from data_preparation import DataProvider
-    import pickle
-    loadpath = os.path.join(dir,name)
+    import os
+    from sklearn.externals import joblib
+    loadpath = os.path.join(dir, name)
     print("Loading {}...".format(loadpath))
-    with tf.gfile.GFile(loadpath, "rb") as f:
-        datasets = pickle.load(f)
+    datasets = joblib.load(loadpath)
     print("Done!")
     return datasets
+
 
 ################# entry point for bert evaluation ################
 def run_evaluation_bert(datasets_dir=config.GCP_DATASETS_DIR,
@@ -416,7 +415,7 @@ def run_evaluation_bert(datasets_dir=config.GCP_DATASETS_DIR,
     ## datasets_name is name of dataset pkl
     ## suffix will be appended to session name - good for multiple runs with same dataset to avoid name collision.
     ## white_list names of datasets ex. ['small-450','med-1500] to run. if none, runs all.
-    datasets = load_datasets_for_evaluation(dir=datasets_dir,name=dataset_name)
+    datasets = _load_datasets_for_evaluation(dir=datasets_dir,name=dataset_name)
     for key,dataset in datasets.items():
         if white_list is not None and not key in white_list:
             continue
