@@ -431,7 +431,7 @@ def run_evaluation_bert(datasets_dir=config.GCP_DATASETS_DIR,
         session.train()
         session.evaluate()
         print(session.evaluation_results)
-        session.predict()
+        #session.predict()
         session.persist(output_dir=output_dir)
 
 
