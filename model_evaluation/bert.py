@@ -407,6 +407,7 @@ def load_datasets_for_evaluation(dir=config.GCP_DATASETS_DIR,name="datasets_for_
 
 ################# entry point for bert evaluation ################
 def run_evaluation_bert(datasets_dir=config.GCP_DATASETS_DIR,
+                        dataset_name="datasets_for_eval.pkl",
                         output_dir = config.GCP_SESSIONS_DIR,
                         suffix="_1", white_list=None):
     ## call this method to run an evaluation on a dataset using bert estimator
@@ -415,7 +416,7 @@ def run_evaluation_bert(datasets_dir=config.GCP_DATASETS_DIR,
     ## datasets_name is name of dataset pkl
     ## suffix will be appended to session name - good for multiple runs with same dataset to avoid name collision.
     ## white_list names of datasets ex. ['small-450','med-1500] to run. if none, runs all.
-    datasets = load_datasets_for_evaluation(dir=datasets_dir)
+    datasets = load_datasets_for_evaluation(dir=datasets_dir,name=dataset_name)
     for key,dataset in datasets.items():
         if white_list is not None and not key in white_list:
             continue

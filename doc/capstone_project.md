@@ -605,21 +605,31 @@ Implementing discriminative fine-tuning and (especially) gradual unfreezing impr
 
 ### Model Evaluation 
 
-Without any further ado,  I present the accuracy results for each classifier, and each sample in the total dataset. 
+Without any further ado,  I present the accuracy results for each classifier, for each sample in the total dataset. 
 
 ![](C:\Projects\udacity-capstone\img\results.png) 
 
 ![](C:\Projects\udacity-capstone\img\results_table.PNG) 
 
-The accuracy results reflect the score on the "evaluation" held-out data for each sample, which was consistently 1/3 of the training set size. 
+These results were obtained using one dataset, containing one sample for each sample size, and one pass through each estimator for each sample size. 
 
-We can immediately make the following conclusions:
+The accuracy results reflect the score on the "evaluation" held-out data for each sample, which was consistently 1/3 of the training set size.  
 
-* ULMFiT performed poorly, barely better than a naive classifier on small data. This is surprising and disappointing, particularly because the ULMFiT authors report that ULMFiT performs well on small data on an IMDB sentiment analysis dataset. It does not appear as if ULMFiT was able to learn useful abstractions which would enable it to generalize well to new examples. 
-* BERT is the strongest classifier in this evaluation, but less so than the others with larger data, where the performance of the 3 is comparable
-* The best accuracy score in this evaluation was 75%. This was obtained by the BERT classifier on the full dataset with ~110k training examples. 
-* BERT is particularly strong on small and medium data (150-1500 training examples), precisely the samples of interest in this evaluation. In this range, BERT consistently outperforms the baseline estimator by more than 1/3, on the "small-450" sample BERT performs almost 2x as well as the baseline. 
-* BERT reaches an accuracy of 50% with only 450 training examples. The baseline needs 3000 training examples to reach 50%, and ULMFiT still more. BERT reaches 50 and 60% accuracy with ~10x less training data than is required for the other classifiers. 
+Based on these results, we can immediately make the following conclusions:
+
+- ULMFiT performed poorly, barely better than a naive classifier on small data. This is surprising and disappointing, particularly because the ULMFiT authors report that ULMFiT performs well on small data on an IMDB sentiment analysis dataset. It does not appear as if ULMFiT was able to learn useful abstractions which would enable it to generalize well to new examples. 
+- BERT is the strongest classifier in this evaluation, but less so than the others with larger data, where the performance of the 3 is comparable
+- The best accuracy score in this evaluation was 75%. This was obtained by the BERT classifier on the full dataset with ~110k training examples. 
+- BERT is particularly strong on small and medium data (150-1500 training examples), precisely the samples of interest in this evaluation. In this range, BERT consistently outperforms the baseline estimator by more than 1/3, on the "small-450" sample BERT performs almost 2x as well as the baseline. 
+- BERT reaches an accuracy of 50% with only 450 training examples. The baseline needs 3000 training examples to reach 50%, and ULMFiT still more. BERT reaches 50 and 60% accuracy with ~10x less training data than is required for the other classifiers. 
+
+
+
+However, it is still unclear how robust these results are, and if similar results are reproducible if different samples from the dataset are used. In order to check how sensitive the classifiers are to different data, 3 more datasets were produced. The datasets contain samples of the sizes `small-150` to `med-1500.` This is to focus our attention on the small datasets which are the focus of the evaluation, and also because generating results using large data samples is time-consuming and expensive for BERT and ULMFiT. 
+
+After running an evaluation on the 3 new datasets of small samples, an average evaluation score was taken for each. The results are as follows: 
+
+ 
 
 As noted above, the best classifier accuracy achieved was ~75% on the full dataset. This indicates that about 25% of the examples of the dataset might have insufficient information content or be too ambiguous to be clearly classified at all. In order to examine some of the challenges and ambiguities of this data, it is useful to examine some of the examples the strongest classifier failed to classify correctly. On a test dataset of 100 examples, the BERT-full classifier missed only 11 examples (89% accuracy on the test dataset!). Those examples are shown below
 
