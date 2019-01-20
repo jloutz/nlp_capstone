@@ -156,7 +156,7 @@ def _load_datasets_for_evaluation(dir=config.GCP_LOCAL_DATASETS_DIR,name="datase
     loadpath = os.path.join(dir,name)
     print("Loading {}...".format(loadpath))
     with open(loadpath,'rb') as f:
-        datasets = pickle.load(loadpath)
+        datasets = pickle.load(f)
     print("Done!")
     return datasets
 
