@@ -104,7 +104,7 @@ class Results:
         return (baseres, bertres, ulmres)
 
     @classmethod
-    def show_results_hist(cls,df,session_names,mean_or_max='max',with_ulm=False):
+    def show_results_hist(cls,df,session_names,mean_or_max='max',with_ulm=True):
         import matplotlib.pyplot as plt
         import numpy as np
         scores = None
@@ -204,10 +204,10 @@ def results_table_from_results_df(filepath=config.RESULTS_DF_PATH,mean_or_max='m
 
     res_tbl = pd.DataFrame()
     sessnames = baseres.index.get_level_values('sess_name')
-    res_tbl.index=sessnames
     res_tbl['BERT'] = bertres['eval_score'].values
     res_tbl['Baseline'] = baseres['eval_score'].values
     res_tbl['ULMFiT'] = ulmres['eval_score'].values
+    res_tbl.index=sessnames
     return res_tbl
 
 

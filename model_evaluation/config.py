@@ -5,6 +5,8 @@ GCP_SESSIONS_DIR = "gs://nlpcapstone_bucket/sessions"
 GCP_LOCAL_SESSIONS_DIR = "/home/jloutz67/nlp_capstone/results/sessions"
 LOCAL_ULMFIT_SESSIONS_DIR = "C:/Projects/udacity-capstone/results/ulmfit_sessions"
 
+FINAL_SESSIONS_DIR = "C:\Projects/udacity-capstone/results/final_sessions"
+
 LOCAL_RESULTS_DIR = "C:/Projects/udacity-capstone/results"
 
 
